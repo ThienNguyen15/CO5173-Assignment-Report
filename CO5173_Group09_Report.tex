@@ -81,8 +81,6 @@
     hypertexnames=false   % tránh trùng anchor trang khi Chương 1 đặt lại số trang
 }
 % \usepackage[authoryear]{natbib}
-\usepackage[acronym]{glossaries}
-
 % table vertical
 \usepackage{lscape}
 
@@ -122,7 +120,6 @@
 \newcommand{\nomwithdim}[5]{\nomenclature[#1]{#2}%
 {\nomdescr{#3}\DimensUnits{#4}{#5}}}
 
-\renewcommand{\acronymname}{Danh mục viết tắt}
 \makenomenclature
 %\usepackage[francais]{babel}
 \usepackage{a4wide,amssymb,epsfig,latexsym,array,float,hhline,fancyhdr}
@@ -292,12 +289,15 @@
     alsoletter={.,_}
 }
 
-% Glossary
-\makeglossaries
-
-\input{Bibliocosas/glossary.tex}
-
 \setstretch{1.25}
+% Cho phép hình và bảng lớn nằm đầu trang mà vẫn có chữ bên dưới, thay vì bị dồn ra một trang
+% riêng chỉ có một hình (tránh các trang trống nửa trang)
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.8}
+\renewcommand{\textfraction}{0.07}
+\renewcommand{\floatpagefraction}{0.8}
+\setcounter{topnumber}{3}
+\setcounter{totalnumber}{4}
 % \setlength{\parskip}{1em}
 % \addbibresource{"References/references.bib"}
 
@@ -418,6 +418,19 @@ luatexbase.add_to_callback("pre_linebreak_filter", last_line_two_words, "mp.last
 \newcommand{\ident}[1]{\texttt{\identscan#1\relax}}
 \def\identscan#1{\ifx#1\relax\else#1\ifx#1.\allowbreak\fi\ifx#1-\allowbreak\fi\expandafter\identscan\fi}
 
+% Tên ngắn của bảy bên liên quan (Mục 1.2). Mọi hình, bảng và đoạn văn dùng các lệnh này để tên
+% luôn thống nhất; mỗi tên là liên kết tới mục mô tả bên liên quan đó. \mbox giữ mỗi từ nguyên vẹn
+% (không ngắt kiểu "Perfor-mance"), nhưng vẫn cho xuống dòng giữa hai từ.
+\newcommand{\shCMO}{\hyperref[sec:c1-sh-cmo]{CMO}}
+\newcommand{\shPM}{\hyperref[sec:c1-sh-performance]{\mbox{Performance} \mbox{Marketing}}}
+\newcommand{\shCRM}{\hyperref[sec:c1-sh-crm]{CRM}}
+\newcommand{\shDA}{\hyperref[sec:c1-sh-analyst]{\mbox{Data} \mbox{Analyst}}}
+\newcommand{\shEC}{\hyperref[sec:c1-sh-ecommerce]{\mbox{E-commerce}}}
+\newcommand{\shDE}{\hyperref[sec:c1-sh-engineer]{DE}}
+\newcommand{\shDO}{\hyperref[sec:c1-sh-owner]{\mbox{Data} \mbox{Owner}}}
+% Mã yêu cầu nghiệp vụ có liên kết tới phần mô tả chi tiết: \BR{01} -> BR-01
+\newcommand{\BR}[1]{\hyperref[br:#1]{BR-#1}}
+
 \begin{document}
 \def\biblio{}
 
@@ -506,6 +519,7 @@ luatexbase.add_to_callback("pre_linebreak_filter", last_line_two_words, "mp.last
 \listoffigures
 %\listofsymbols
 \listoftables
+\input{Bibliocosas/glossary.tex}
 %\listofalgorithms
 
 \fancypagestyle{plain}{%
