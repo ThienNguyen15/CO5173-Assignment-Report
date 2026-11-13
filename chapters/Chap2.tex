@@ -10,7 +10,7 @@ Dữ liệu marketing thật luôn gắn với thông tin cá nhân và bí mậ
 
 Định danh khách hàng, chiến dịch, phiên, click, đơn hàng và email được giữ nhất quán giữa các nguồn, nên dữ liệu vừa đủ ``bẩn'' để kiểm tra đường ống, vừa đủ chặt chẽ để đối soát. Bảng~\ref{tab:sources} tóm tắt các nguồn dữ liệu.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
 \caption{Đặc tả các nguồn dữ liệu, định dạng, khóa liên kết và đặc trưng nổi bật}
 \label{tab:sources}
@@ -38,7 +38,7 @@ Dữ liệu marketing thật luôn gắn với thông tin cá nhân và bí mậ
 
 Ba luồng sự kiện được phát lại vào Kafka theo đúng thứ tự thời gian bởi công cụ \texttt{replay}. Luồng \texttt{web\_events} mô tả hành trình mua sắm trên web và ứng dụng qua năm sự kiện \texttt{page\_view}, \texttt{view\_item}, \texttt{add\_to\_cart}, \texttt{begin\_checkout} và \texttt{purchase}; các phiên đến từ quảng cáo trả phí mang theo \texttt{click\_id} và \texttt{campaign\_id}. Luồng \texttt{orders} ghi nhận giao dịch tài chính qua \texttt{order\_created} và \texttt{order\_refunded}. Luồng \texttt{email\_events} theo dõi vòng đời một email qua \texttt{email\_sent}, \texttt{email\_delivered}, \texttt{email\_opened}, \texttt{email\_clicked} và \texttt{email\_unsubscribed}.
 
-Công cụ phát lại có hai đặc điểm quan trọng cho tính đúng. Thứ nhất, producer bật \texttt{enable.idempotence} và \texttt{acks=all}, nên việc gửi lại sau lỗi mạng không sinh bản ghi trùng trong Kafka. Thứ hai, con trỏ phát lại được gắn với mã băm của manifest: nếu thế giới dữ liệu thay đổi, con trỏ cũ sẽ bị từ chối thay vì âm thầm tiếp tục trên một tập dữ liệu khác.
+Công cụ phát lại có hai đặc điểm quan trọng cho tính đúng. Thứ nhất, producer bật \texttt{enable.idempotence} và \texttt{acks=all}, nên khi một lần gửi gặp lỗi mạng và producer tự gửi lại trong cùng phiên làm việc, Kafka không ghi thêm bản sao. Chế độ này không loại được bản ghi trùng có sẵn trong dữ liệu nguồn, vốn được tiêm có chủ đích (Mục~\ref{sec:c2-veracity}); việc khử trùng lặp do Flink và tầng Silver đảm nhận. Thứ hai, con trỏ phát lại được gắn với mã băm của manifest: nếu thế giới dữ liệu thay đổi, con trỏ cũ sẽ bị từ chối thay vì âm thầm tiếp tục trên một tập dữ liệu khác.
 
 \subsection{Dữ liệu lô theo lịch}
 \label{sec:c2-du-lieu-lo}
@@ -80,7 +80,7 @@ Dữ liệu đến từ chín loại nguồn với hai định dạng (CSV và J
 
 \subsection{Vòng đời dữ liệu bốn giai đoạn}
 \label{sec:c2-vong-doi}
-Dữ liệu trong MarketPulse 360 đi qua bốn giai đoạn: \emph{thu thập} (Kafka và kho lưu trữ đối tượng MinIO), \emph{xử lý} (Flink cho luồng, Spark cho lô), \emph{lưu trữ} (Iceberg cho lịch sử, ClickHouse cho phục vụ phân tích, PostgreSQL cho dữ liệu vận hành) và \emph{phân phối} (FastAPI và giao diện Next.js). Điểm then chốt của kiến trúc là cả hai nhánh xử lý đều bắt nguồn từ \emph{cùng một trục sự kiện Kafka} (Hình~\ref{fig:architecture}): số liệu trực tiếp và số liệu lịch sử vì vậy luôn được tính từ cùng một nguồn sự thật.
+Dữ liệu trong MarketPulse 360 đi qua bốn giai đoạn: \emph{thu thập} (Kafka và kho lưu trữ đối tượng MinIO), \emph{xử lý} (Flink cho luồng, Spark cho lô), \emph{lưu trữ} (Iceberg cho lịch sử, ClickHouse cho phục vụ phân tích, PostgreSQL cho dữ liệu vận hành) và \emph{phân phối} (FastAPI và giao diện Next.js). Điểm then chốt của kiến trúc là cả hai nhánh xử lý đều bắt nguồn từ \emph{cùng một trục sự kiện Kafka} (Hình~\ref{fig:architecture}), nên số liệu trực tiếp và số liệu lịch sử được tính từ cùng một nguồn. Hai nhánh không hoàn toàn độc lập: nhánh lô lưu vào Bronze cả topic \texttt{raw} lẫn đầu ra \texttt{clean} và DLQ của Flink, rồi dựng tầng Silver từ đầu ra của Flink. Mục~\ref{sec:c3-lakehouse-co-che} phân tích hệ quả của sự phụ thuộc này. Hai thành phần dùng chung cho cả hai nhánh là Apicurio Registry, nơi lưu hợp đồng dữ liệu của các topic, và cặp Prometheus, Grafana, thu chỉ số vận hành của Kafka, Flink, ClickHouse và API năm giây một lần để phục vụ giám sát và cảnh báo.
 
 \begin{figure}[H]
     \centering
@@ -91,18 +91,18 @@ Dữ liệu trong MarketPulse 360 đi qua bốn giai đoạn: \emph{thu thập} 
 
 \subsection{Nhánh luồng (Streaming)}
 \label{sec:c2-streaming}
-Flink đọc các topic \texttt{raw}, kiểm tra hợp đồng dữ liệu, khử trùng lặp, phân loại sự kiện trễ, gom phiên và cập nhật chỉ số theo chiến dịch, rồi ghi kết quả ra các topic \texttt{clean} và \texttt{gold} với bảo đảm \emph{exactly-once}. Hai tiến trình nền của ứng dụng đọc các topic này và nạp vào cơ sở dữ liệu \texttt{marketpulse\_live} trên ClickHouse. Số liệu ở nhánh này có độ trễ vài giây nhưng mang tính tạm thời: nó chưa qua lọc đồng thuận ở cấp hồ sơ, chưa có chi phí quảng cáo và chưa được đối soát.
+Flink đọc các topic \texttt{raw}, kiểm tra hợp đồng dữ liệu, khử trùng lặp, phân loại sự kiện trễ, gom phiên và cập nhật chỉ số theo chiến dịch, rồi ghi kết quả ra các topic \texttt{clean} và \texttt{gold} với bảo đảm \emph{exactly-once}. Hai tiến trình nền của ứng dụng đọc các topic này và nạp vào cơ sở dữ liệu \texttt{marketpulse\_live} trên ClickHouse. Số liệu ở nhánh này có độ trễ vài giây nhưng mang tính tạm thời: chưa có chi phí quảng cáo và chưa được đối soát. Mức quản trị cũng khác nhau giữa hai nơi đọc dữ liệu: chỉ số chiến dịch do Flink tính chưa loại sự kiện thiếu đồng thuận phân tích và phiên bot, còn màn hình Live View áp dụng đúng quy tắc của tầng Silver (khử trùng, lọc đồng thuận, loại phiên bot) ngay khi truy vấn.
 
 \subsection{Nhánh lô (Batch)}
 \label{sec:c2-batch}
-Theo lịch hằng ngày, Dagster điều phối Spark lưu trữ bất biến các bản ghi Kafka và các file báo cáo vào tầng Bronze, xây dựng tầng Silver và Gold trên Iceberg, xuất snapshot sang một cơ sở dữ liệu ClickHouse ứng viên, chạy \texttt{dbt build} cùng bộ đối soát, rồi mới công bố. Nhánh này chậm hơn nhưng đầy đủ: nó thấy dữ liệu đến trễ, có chi phí quảng cáo từ cả bốn nền tảng và áp dụng toàn bộ quy tắc quản trị. Giao diện luôn ghi rõ con số nào thuộc nhánh nào.
+Theo lịch hằng ngày, Dagster điều phối Spark lưu trữ bất biến các bản ghi Kafka và các file báo cáo vào tầng Bronze, xây dựng tầng Silver và Gold trên Iceberg, xuất snapshot sang một cơ sở dữ liệu ClickHouse ứng viên, chạy \texttt{dbt build} cùng bộ đối soát, rồi mới công bố. Nhánh này chậm hơn nhưng đầy đủ hơn: có chi phí quảng cáo từ cả bốn nền tảng, áp dụng toàn bộ quy tắc quản trị và được đối soát trước khi công bố. Về sự kiện đến trễ, nhánh lô kế thừa cách phân loại của Flink: sự kiện trễ trong ngưỡng sửa 10 phút được tính, còn sự kiện trễ hơn bị loại ở cả hai nhánh. Giao diện luôn ghi rõ con số nào thuộc nhánh nào.
 
 \section{Mô hình dữ liệu Medallion}
 \label{sec:c2-medallion}
 
 Hồ dữ liệu được tổ chức theo kiến trúc Medallion gồm 15 bảng Iceberg (Hình~\ref{fig:medallion}). Mỗi tầng có một trách nhiệm rõ ràng: Bronze giữ nguyên bản gốc để có thể phát lại và tính lại; Silver làm sạch, chuẩn hóa và quản trị; Gold tổng hợp sẵn cho các câu hỏi nghiệp vụ. Toàn bộ lược đồ được khai báo một lần trong \texttt{contracts.py} và dùng chung cho cả mã xây dựng bảng lẫn mã kiểm chứng.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
     \centering
     \resizebox{\textwidth}{!}{\input{chapters/Figs/fig-medallion}}
     \caption{Luồng biến đổi dữ liệu Medallion Bronze $\rightarrow$ Silver $\rightarrow$ Gold}
@@ -118,7 +118,7 @@ Tầng Bronze gồm ba bảng (Hình~\ref{fig:schema-bronze}). Bảng \texttt{br
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.78\textwidth]{chapters/Pics/schema-bronze.png}
+    \includegraphics[width=0.92\textwidth]{chapters/Pics/schema-bronze.png}
     \caption{Lược đồ quan hệ tầng Bronze}
     \label{fig:schema-bronze}
 \end{figure}
@@ -126,15 +126,22 @@ Tầng Bronze gồm ba bảng (Hình~\ref{fig:schema-bronze}). Bảng \texttt{br
 \subsection{Tầng Silver: dữ liệu chuẩn hóa}
 \label{sec:c2-silver}
 
-Tầng Silver gồm sáu bảng (Hình~\ref{fig:schema-silver}). Trung tâm là \texttt{silver.customer\_events} với 26 cột: mỗi sự kiện hợp lệ xuất hiện đúng một lần theo \texttt{event\_id}, mang \texttt{profile\_key} đã hợp nhất (\texttt{customer:}, \texttt{anonymous:} hoặc \texttt{session:}), cờ bot, trạng thái đến trễ, và bộ ba lineage \texttt{(lineage\_topic, lineage\_partition, lineage\_offset)} trỏ ngược về đúng bản ghi gốc trong Bronze. Ba bảng danh mục \texttt{silver.campaigns}, \texttt{silver.customers}, \texttt{silver.products} cùng bảng chi phí \texttt{silver.ad\_spend\_daily} đều giữ lineage \texttt{(source\_file, source\_row\_number)} về dòng nguồn. Bảng \texttt{silver.quality\_summary} đếm số bản ghi theo ngày, topic và mã lý do (chấp nhận, trùng lặp, sai quy cách, từ chối đồng thuận, bot\ldots), là đầu vào cho màn hình sức khỏe dữ liệu.
+Tầng Silver gồm sáu bảng, trình bày trong hai hình: Hình~\ref{fig:schema-silver} gồm bảng sự kiện và ba bảng danh mục, Hình~\ref{fig:schema-silver-2} gồm bảng chi phí quảng cáo và bảng thống kê chất lượng. Trung tâm là \texttt{silver.customer\_events} với 26 cột: mỗi sự kiện hợp lệ xuất hiện đúng một lần theo \texttt{event\_id}, mang \texttt{profile\_key} đã hợp nhất (\texttt{customer:}, \texttt{anonymous:} hoặc \texttt{session:}), cờ bot, trạng thái đến trễ, và bộ ba lineage \texttt{(lineage\_topic, lineage\_partition, lineage\_offset)} trỏ ngược về đúng bản ghi gốc trong Bronze. Ba bảng danh mục \texttt{silver.campaigns}, \texttt{silver.customers}, \texttt{silver.products} cùng bảng chi phí \texttt{silver.ad\_spend\_daily} đều giữ lineage \texttt{(source\_file, source\_row\_number)} về dòng nguồn. Bảng \texttt{silver.quality\_summary} đếm số bản ghi theo ngày, topic và mã lý do (chấp nhận, trùng lặp, sai quy cách, từ chối đồng thuận, bot\ldots), là đầu vào cho màn hình sức khỏe dữ liệu.
 
 Quan hệ giữa các bảng được kiểm tra ngay khi xây dựng: chi phí không ánh xạ được về chiến dịch làm thất bại cả lô, khách hàng trong CRM phải tồn tại trong danh mục khách hàng, và mã \texttt{platform\_campaign\_id} phải duy nhất.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
     \centering
-    \includegraphics[width=\textwidth]{chapters/Pics/schema-silver.png}
-    \caption{Lược đồ quan hệ tầng Silver}
+    \includegraphics[width=\textwidth, height=0.86\textheight, keepaspectratio]{chapters/Pics/schema-silver-1.png}
+    \caption{Lược đồ quan hệ tầng Silver (phần 1): sự kiện khách hàng và các bảng danh mục}
     \label{fig:schema-silver}
+\end{figure}
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.42\textwidth]{chapters/Pics/schema-silver-2.png}
+    \caption[Lược đồ quan hệ tầng Silver (phần 2): chi phí quảng cáo và thống kê chất lượng]{Lược đồ quan hệ tầng Silver (phần 2): chi phí quảng cáo và thống kê chất lượng. Khóa ngoại \texttt{campaign\_id} của \texttt{silver.ad\_spend\_daily} trỏ tới \texttt{silver.campaigns} ở Hình~\ref{fig:schema-silver}}
+    \label{fig:schema-silver-2}
 \end{figure}
 
 \section{Lựa chọn lưu trữ và phương án thay thế}
@@ -145,9 +152,9 @@ Quan hệ giữa các bảng được kiểm tra ngay khi xây dựng: chi phí 
 
 MarketPulse 360 không dùng một cơ sở dữ liệu cho mọi việc. Mỗi kiểu tải truy cập được giao cho hệ thống phù hợp nhất (Bảng~\ref{tab:components}): kho đối tượng giá rẻ cho dữ liệu gốc, định dạng bảng có giao dịch cho lịch sử, CSDL cột cho truy vấn phân tích độ trễ thấp và CSDL quan hệ cho dữ liệu vận hành cần ràng buộc chặt. Nhờ tách biệt, việc tính lại toàn bộ lịch sử trên Spark không ảnh hưởng đến người dùng đang đọc ClickHouse, và dữ liệu nghiệp vụ của ứng dụng (tài khoản, cấu hình, phân đoạn) không lẫn vào kho phân tích.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
-\caption{Vai trò của các công cụ xử lý và các thành phần lưu trữ}
+\caption{Vai trò của các thành phần xử lý, lưu trữ và giám sát}
 \label{tab:components}
 \small
 \renewcommand{\arraystretch}{1.2}
@@ -156,6 +163,7 @@ MarketPulse 360 không dùng một cơ sở dữ liệu cho mọi việc. Mỗi 
 \textbf{Thành phần} & \textbf{Loại} & \textbf{Vai trò trong MarketPulse 360} \\
 \midrule
 Apache Kafka 4.3.1 & Xử lý (truyền tải) & Trục sự kiện chung, lưu nhật ký có thứ tự để phát lại \\
+Apicurio Registry 3.3.3 & Hợp đồng dữ liệu & JSON Schema có phiên bản cho 10 topic \\
 Apache Flink 2.2.1 & Xử lý luồng & Kiểm tra, khử trùng, gom phiên, chỉ số trực tiếp, exactly-once \\
 Apache Spark 4.0.4 & Xử lý lô & Xây dựng Bronze, Silver, Gold trên Iceberg \\
 Dagster 1.13 & Điều phối & Lập lịch và quản lý phụ thuộc giữa 13 tài sản dữ liệu \\
@@ -166,6 +174,8 @@ Apache Iceberg 1.12.0 & Định dạng bảng & Snapshot có giao dịch, phân 
 Project Nessie 0.109.0 & Catalog & Quản lý danh mục bảng Iceberg, lưu trên PostgreSQL riêng \\
 ClickHouse 26.8 & CSDL cột (OLAP) & Phục vụ release đã kiểm chứng và số liệu trực tiếp \\
 PostgreSQL 17.6 & CSDL quan hệ (OLTP) & Tài khoản, cấu hình, cảnh báo, phân đoạn, sổ cái công bố \\
+\midrule
+Prometheus 3.14 và Grafana 13.2 & Giám sát & Thu chỉ số năm giây một lần (độ trễ tiêu thụ Kafka, trạng thái và checkpoint của Flink, bộ nhớ ClickHouse, độ trễ và lỗi của API); 9 luật cảnh báo, 18 bảng biểu \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -178,4 +188,4 @@ Kafka Streams là lựa chọn thay thế tự nhiên của Flink: nó là thư 
 \subsection{Tầng phục vụ: ClickHouse, PostgreSQL, BigQuery}
 \label{sec:c2-alt-serving}
 
-Với tầng phục vụ, phương án đối chứng là PostgreSQL, một CSDL lưu theo dòng, dùng chỉ mục B-tree. Nếu PostgreSQL đủ nhanh, hệ thống có thể bỏ bớt một thành phần. Thực nghiệm ở Mục~\ref{sec:c5-clickhouse-vs-postgres} so sánh hai hệ thống trên cùng dữ liệu dạng Gold ở các quy mô 1, 10 và 20 triệu dòng. Google BigQuery cùng BigLake là phương án đám mây có thể đọc trực tiếp bảng Iceberg; phương án này được cân nhắc nhưng chưa được đo đạc vì giới hạn tài nguyên đám mây của nhóm, và báo cáo không đưa ra kết luận nào về nó.
+Với tầng phục vụ, phương án đối chứng là PostgreSQL, một CSDL lưu theo dòng, dùng chỉ mục B-tree. Nếu PostgreSQL đủ nhanh, hệ thống có thể bỏ bớt một thành phần. Thực nghiệm ở Mục~\ref{sec:c5-clickhouse-vs-postgres} so sánh hai hệ thống trên cùng một bảng dữ liệu mô phỏng có cấu trúc giống tầng Gold, ở các quy mô 1, 10 và 20 triệu dòng. Google BigQuery cùng BigLake là phương án đám mây có thể đọc trực tiếp bảng Iceberg; phương án này được cân nhắc nhưng chưa được đo đạc vì giới hạn tài nguyên đám mây của nhóm, và báo cáo không đưa ra kết luận nào về nó.
