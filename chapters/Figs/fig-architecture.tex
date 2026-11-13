@@ -6,18 +6,22 @@
   \node[h] (fl) at (7.2,0)  {Apache Flink\\ \scriptsize\mdseries kiểm tra, khử trùng,\\ \scriptsize\mdseries gom phiên, chỉ số};
   \node[b] (k2) at (10.8,0) {\textbf{Apache Kafka}\\ topic \texttt{clean}, \texttt{gold}};
   \node[b] (lv) at (14.4,0) {\textbf{Serving workers}\\ ghi vào\\ ClickHouse live};
+  % Hợp đồng dữ liệu cho các topic
+  \node[mpbox=27mm] (ap) at (3.6,2.4) {\textbf{Apicurio Registry}\\ hợp đồng JSON Schema};
   % Nhánh lô
   \node[b] (b0) at (0,-3.4)    {\textbf{Quảng cáo,}\\ \textbf{CRM, danh mục}\\ (CSV/JSONL)};
   \node[b] (br) at (3.6,-3.4)  {\textbf{Bronze}\\ Spark + Iceberg\\ trên MinIO};
   \node[h] (sg) at (7.2,-3.4)  {Silver $\rightarrow$ Gold\\ \scriptsize\mdseries Spark, Iceberg, Nessie};
   \node[b] (rc) at (10.8,-3.4) {\textbf{Release ứng viên}\\ ClickHouse,\\ dbt và đối soát};
   \node[b] (pb) at (14.4,-3.4) {\textbf{Công bố}\\ \textbf{nguyên tử}\\ sổ cái PostgreSQL};
-  % Ứng dụng
+  \node[mpbox=135mm] (dg) at (9.0,-5.5) {\textbf{Dagster}: điều phối nhánh lô hằng ngày lúc 02:00, từ nạp Bronze đến công bố};
+  % Ứng dụng và giám sát
   \node[mphead=24mm, minimum height=20mm] (app) at (18.2,-1.7) {Command\\ Center\\[2pt] \scriptsize\mdseries FastAPI + Next.js};
+  \node[mpbox=24mm] (mon) at (18.2,2.4) {\textbf{Giám sát}\\ Prometheus + Grafana\\ \scriptsize Kafka, Flink,\\ \scriptsize ClickHouse, API};
 
   \begin{scope}[on background layer]
-    \node[mpzone, fit=(s0)(lv)] (zs) {};
-    \node[mpzone, fit=(b0)(pb)] (zb) {};
+    \node[mpzone, fit=(s0)(lv)(ap)] (zs) {};
+    \node[mpzone, fit=(b0)(pb)(dg)] (zb) {};
   \end{scope}
   \node[mpzonelabel, anchor=south west] at (zs.north west) {Nhánh luồng (Streaming): độ trễ thấp, số liệu tạm thời};
   \node[mpzonelabel, anchor=north west] at (zb.south west) {Nhánh lô (Batch): lịch sử đầy đủ, số liệu đã kiểm chứng};
@@ -32,7 +36,11 @@
   \draw[mparrow] (rc) -- (pb);
   \draw[mparrow] (lv.east) -- ++(0.6,0) |- ([yshift=4mm]app.west);
   \draw[mparrow] (pb.east) -- ++(0.6,0) |- ([yshift=-4mm]app.west);
-  % Spark lưu trữ các topic Kafka vào Bronze
+  % Hợp đồng, điều phối và giám sát
+  \draw[mpdash] (ap) -- node[right, mpnote] {kiểm tra hợp đồng} (k1);
+  \foreach \n in {br, sg, rc, pb} \draw[mpdash] (\n.south |- dg.north) -- (\n.south);
+  \draw[mpdash] (mon.west -| zs.east) -- (mon.west);
+  % Nhánh lô lưu vào Bronze cả topic raw lẫn đầu ra clean và DLQ của Flink
   \draw[mpdash] (k1.south) -- node[left, mpnote, pos=0.5] {Spark đọc \texttt{read\_committed}} (br.north);
-  \draw[mpdash] (k2.south) -- ++(0,-0.55) -| ([xshift=4mm]br.north);
+  \draw[mpdash] (k2.south) -- ++(0,-0.55) -| node[pos=0.25, below, mpnote, align=center] {\texttt{clean.customer-events}\\ \texttt{dlq.flink-validation}} ([xshift=4mm]br.north);
 \end{tikzpicture}
