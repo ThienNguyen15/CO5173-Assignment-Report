@@ -18,10 +18,10 @@ Một hệ thống dữ liệu marketing chạy được trên dữ liệu mẫu
 \toprule
 \textbf{Chặng} & \textbf{Dữ liệu bẩn} & \textbf{Quyền riêng tư} & \textbf{Chi phí và mở rộng} \\
 \midrule
-Thu thập & Hợp đồng sự kiện có phiên bản trên Apicurio; bản ghi sai hợp đồng vào \texttt{dlq.validation} kèm lý do & Chỉ thu nhận trường cần cho phân tích; trạng thái đồng thuận đi kèm hồ sơ CRM & Retention theo hợp đồng: 7 ngày cho raw/clean, 30 ngày compact cho Gold \\
+Thu thập & Hợp đồng sự kiện có phiên bản trên Apicurio; bản ghi sai hợp đồng vào \texttt{dlq.validation} kèm lý do & Chỉ thu nhận trường cần cho phân tích; trạng thái đồng thuận đi kèm hồ sơ CRM & Retention theo hợp đồng: 7 ngày cho raw/clean, 30 ngày compact cho Gold; nhánh lô phải chạy ít nhất 7 ngày một lần \\
 Xử lý & Flink khử trùng lặp theo khóa sự kiện (TTL 7 ngày), xử lý trễ bằng watermark; bản ghi lỗi vào \texttt{dlq.flink-validation} kèm mã lỗi & Silver loại sự kiện bị từ chối đồng thuận và phiên bot trước khi tính toán & Trạng thái có TTL; song song hóa theo partition Kafka \\
 Lưu trữ & Silver đối soát hai chiều raw--clean--DLQ, phát hiện xung đột payload; Gold kiểm thử bằng dbt & Hồ sơ chỉ xuất hiện qua \texttt{profile\_ref} băm theo release; mật khẩu băm scrypt & Iceberg trên MinIO, snapshot bất biến; ClickHouse lưu cột, nén tốt \\
-Phân phối & Chỉ công bố release đã qua 7 bước chứng thực; release lỗi không bao giờ được kích hoạt & RBAC ba vai trò, phiên mờ có hạn, nhật ký kiểm toán đã làm sạch; kích hoạt chỉ khi đủ đồng thuận & API ghim release, truy vấn đọc ít cột; mở rộng ngang theo partition \\
+Phân phối & Chỉ công bố release đã qua 7 bước kiểm chứng; release lỗi không bao giờ được kích hoạt & RBAC ba vai trò, phiên mờ có hạn, nhật ký kiểm toán đã làm sạch; kích hoạt chỉ khi đủ đồng thuận & API ghim release, truy vấn đọc ít cột; mở rộng ngang theo partition \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -42,7 +42,7 @@ Hồ sơ khách hàng, lịch sử mua hàng và hành vi duyệt web là dữ l
     \item \textbf{Đồng thuận là điều kiện, không phải chú thích.} Sự kiện của khách từ chối đồng thuận phân tích bị loại ở Silver trước khi đi vào bất kỳ chỉ số nào. Một khách hàng chỉ được đưa vào danh sách kích hoạt khi đã định danh trong CRM và có \emph{cả} đồng thuận phân tích lẫn đồng thuận marketing hiện hành; trạng thái không rõ hoặc bị từ chối đều được xử lý theo hướng an toàn (\emph{fail closed}). Khi khách từ chối đồng thuận phân tích, chi tiết dòng thời gian của họ bị ẩn.
     \item \textbf{Giảm khả năng nhận diện.} Giao diện vòng đời khách hàng không dùng khóa gốc mà dùng \texttt{profile\_ref}, là giá trị SHA-256 của định danh release ghép với khóa hồ sơ. Vì giá trị này gắn với từng release, không thể dùng nó để nối dữ liệu giữa các release khác nhau.
     \item \textbf{Bảo vệ truy cập.} Mật khẩu được băm bằng scrypt có muối; token phiên chỉ được lưu dưới dạng băm SHA-256 và có thời hạn. Ba vai trò \texttt{viewer}, \texttt{operator} và \texttt{admin} giới hạn chức năng theo nguyên tắc quyền tối thiểu, và mọi thao tác quản trị được ghi vào nhật ký kiểm toán chỉ-ghi-thêm đã làm sạch.
-    \item \textbf{Tách bạch dữ liệu.} Tài khoản, bằng chứng chất lượng và siêu dữ liệu xác thực nằm trong PostgreSQL vận hành; ClickHouse chỉ chứa dữ liệu phân tích. Chính sách retention chỉ xóa phiên đăng nhập và chuỗi số liệu giám sát, không động đến dữ liệu đã chứng thực.
+    \item \textbf{Tách bạch dữ liệu.} Tài khoản, bằng chứng chất lượng và thông tin đăng nhập nằm trong PostgreSQL vận hành; ClickHouse chỉ chứa dữ liệu phân tích. Chính sách retention chỉ xóa phiên đăng nhập và chuỗi số liệu giám sát, không động đến dữ liệu đã kiểm chứng.
 \end{itemize}
 
 Cần nói rõ giới hạn hiện tại: hệ thống chưa mã hóa hay băm các trường liên hệ như email, số điện thoại ở tầng lưu trữ, và chưa có quy trình tự động đáp ứng yêu cầu xóa dữ liệu của chủ thể. Đây là các hạng mục cần bổ sung trước khi triển khai với dữ liệu thật.
@@ -51,31 +51,32 @@ Cần nói rõ giới hạn hiện tại: hệ thống chưa mã hóa hay băm c
 \label{sec:c6-cost}
 Chi phí của một hệ thống dữ liệu tăng theo ba hướng: lưu trữ, tính toán và vận hành. MarketPulse 360 kiểm soát cả ba bằng các quyết định thiết kế cụ thể.
 
-Về lưu trữ, retention của Kafka được khai báo trong hợp đồng: 7 ngày cho topic raw và clean, 30 ngày kèm nén log (\emph{compaction}) cho topic Gold, nên dữ liệu trên broker không phình ra vô hạn. Lịch sử dài hạn nằm trên Iceberg với lưu trữ đối tượng MinIO, rẻ hơn nhiều so với đĩa của CSDL và có thể thay bằng S3 hoặc GCS mà không phải đổi định dạng bảng. Về tính toán, thực nghiệm ở Mục~\ref{sec:c5-tai-nguyen} cho thấy ClickHouse dùng ít hơn khoảng 14,8 lần thời gian CPU so với PostgreSQL ở 20 triệu dòng. Đây là chênh lệch trực tiếp về chi phí máy chủ khi khối lượng truy vấn tăng. Về vận hành, toàn bộ ngăn xếp là phần mềm mã nguồn mở, chạy bằng Docker Compose và được điều phối bởi Dagster, nên không phát sinh phí bản quyền và có thể tái lập trên bất kỳ máy nào.
+Về lưu trữ, retention của Kafka được khai báo trong hợp đồng: 7 ngày cho topic raw và clean, 30 ngày kèm nén log (\emph{compaction}) cho topic Gold, nên dữ liệu trên broker không phình ra vô hạn. Đổi lại, nhánh lô phải lưu dữ liệu vào Bronze trước khi Kafka xóa, tức phải chạy ít nhất 7 ngày một lần (Mục~\ref{sec:c3-lakehouse-co-che}). Lịch sử dài hạn nằm trên Iceberg với lưu trữ đối tượng MinIO, rẻ hơn nhiều so với đĩa của CSDL và có thể thay bằng S3 hoặc GCS mà không phải đổi định dạng bảng. Về tính toán, thực nghiệm ở Mục~\ref{sec:c5-tai-nguyen} cho thấy ClickHouse dùng ít hơn khoảng 14,8 lần thời gian CPU so với PostgreSQL ở 20 triệu dòng. Đây là chênh lệch trực tiếp về chi phí máy chủ khi khối lượng truy vấn tăng. Về vận hành, toàn bộ ngăn xếp là phần mềm mã nguồn mở, chạy bằng Docker Compose và được điều phối bởi Dagster, nên không phát sinh phí bản quyền và có thể tái lập trên bất kỳ máy nào.
 
-Về khả năng mở rộng, các thành phần đều mở rộng ngang được: topic Kafka có 6 partition (3 với topic Gold), job Flink chạy song song theo partition, Spark xử lý theo snapshot Iceberg, còn ClickHouse có thể thêm shard khi dữ liệu lớn hơn. Giới hạn hiện tại là chứng thực đang chạy lại toàn bộ release mỗi đêm; khi dữ liệu tăng đáng kể, cần chuyển sang chứng thực nối tiếp như trình bày ở Mục~\ref{sec:c6-huong-phat-trien}.
+Về khả năng mở rộng, các thành phần đều mở rộng ngang được: topic Kafka có 6 partition (3 với topic Gold), job Flink chạy song song theo partition, Spark xử lý theo snapshot Iceberg, còn ClickHouse có thể thêm shard khi dữ liệu lớn hơn. Giới hạn hiện tại là quy trình kiểm chứng đang chạy lại trên toàn bộ release mỗi đêm; khi dữ liệu tăng đáng kể, cần chuyển sang kiểm chứng nối tiếp như trình bày ở Mục~\ref{sec:c6-huong-phat-trien}.
 
 \section{Kết luận}
 \label{sec:c6-ket-luan}
 Báo cáo đã trình bày MarketPulse 360, một hệ thống Kỹ thuật Dữ liệu hoàn chỉnh cho phân tích marketing đa kênh, đi từ yêu cầu nghiệp vụ đến ứng dụng ra quyết định. Các đóng góp chính gồm:
 
 \begin{itemize}
-    \item \textbf{Kiến trúc kết hợp luồng và lô có ranh giới rõ ràng.} Kafka, Apicurio và Flink cung cấp chỉ số gần thời gian thực với ngữ nghĩa \emph{exactly-once}; Spark, Iceberg, Nessie và dbt xây dựng các tầng Bronze--Silver--Gold có thể tái lập. Ứng dụng luôn hiển thị tách biệt số liệu trực tiếp và số liệu đã chứng thực, nên người dùng biết mình đang đọc loại số nào.
-    \item \textbf{Cơ chế chứng thực trước khi công bố.} Mỗi release phải qua bảy bước kiểm tra, từ ghim snapshot, chạy kiểm thử dbt, kiểm tra phương trình tài chính đến so khớp checksum, trước khi được kích hoạt nguyên tử qua \texttt{publication\_journal}. Các thí nghiệm cố ý làm hỏng dữ liệu cho thấy release lỗi bị chặn và release đang hoạt động không bị ảnh hưởng.
+    \item \textbf{Kiến trúc kết hợp luồng và lô có ranh giới rõ ràng.} Kafka, Apicurio và Flink cung cấp chỉ số gần thời gian thực, với ngữ nghĩa \emph{exactly-once} trên chặng Flink đọc topic raw và ghi ra topic clean, gold; Spark, Iceberg, Nessie và dbt xây dựng các tầng Bronze, Silver, Gold có thể tái lập. Ứng dụng luôn hiển thị tách biệt số liệu trực tiếp và số liệu đã kiểm chứng, nên người dùng biết mình đang đọc loại số nào.
+    \item \textbf{Cơ chế kiểm chứng trước khi công bố.} Mỗi release phải qua bảy bước kiểm tra, từ ghim snapshot, chạy kiểm thử dbt, kiểm tra phương trình tài chính đến so khớp checksum, trước khi được kích hoạt nguyên tử qua \texttt{publication\_journal}. Các thí nghiệm cố ý làm hỏng dữ liệu cho thấy release lỗi bị chặn và release đang hoạt động không bị ảnh hưởng.
     \item \textbf{Đúng đắn được chứng minh bằng đối soát độc lập.} 386/386 phép kiểm tra trên story-demo khớp tuyệt đối với oracle tính từ dữ liệu nguồn; Flink và Kafka Streams cho đầu ra giống hệt nhau ở cả hai quy mô thử nghiệm.
     \item \textbf{Lựa chọn công nghệ dựa trên đo đạc.} Flink nhanh hơn 1,53 lần về thông lượng ở \num{100000} sự kiện và phục hồi nhanh hơn khoảng 10 lần; ClickHouse nhanh hơn tới 103 lần về $P_{95}$ và tiết kiệm khoảng 14,8 lần CPU so với PostgreSQL ở 20 triệu dòng.
-    \item \textbf{Ứng dụng phục vụ ra quyết định.} Mười không gian làm việc và 41 route API đáp ứng mười yêu cầu nghiệp vụ; mười tác vụ ra quyết định đều đạt trong kiểm chứng tự động, với độ trễ API $P_{95}$ dưới 100~ms.
+    \item \textbf{Ứng dụng phục vụ ra quyết định.} Mười không gian làm việc và 41 route API đáp ứng mười yêu cầu nghiệp vụ; mười tác vụ ra quyết định đều đạt trong kiểm chứng tự động, với độ trễ API $P_{95}$ dưới 100~ms trên fixture 615 dòng.
 \end{itemize}
 
-Bên cạnh đó, nhóm ghi nhận các giới hạn: số liệu hiệu năng là phép đo một lần trên máy cục bộ; đánh giá với người dùng thật chưa được thực hiện; phương án BigQuery/BigLake chưa được đo; và dữ liệu sử dụng là dữ liệu mô phỏng. Các giới hạn này không làm thay đổi kết luận về kiến trúc, nhưng cần được bổ sung trước khi đưa hệ thống vào môi trường thực tế.
+Bên cạnh đó, nhóm ghi nhận các giới hạn: số liệu hiệu năng là phép đo một lần trên máy cục bộ; độ trễ API và các tác vụ ra quyết định mới được đo trên fixture, chưa đo trên story-demo; đánh giá với người dùng thật chưa được thực hiện; phương án BigQuery/BigLake chưa được đo; nhánh lô kế thừa quyết định của Flink nên chưa có phép đối soát giá trị độc lập với Flink trên dữ liệu thật; và dữ liệu sử dụng là dữ liệu mô phỏng. Các giới hạn này không làm thay đổi kết luận về kiến trúc, nhưng cần được bổ sung trước khi đưa hệ thống vào môi trường thực tế.
 
 \section{Hướng phát triển}
 \label{sec:c6-huong-phat-trien}
-Dựa trên các giới hạn nêu trên, nhóm đề xuất bốn hướng phát triển tiếp theo:
+Dựa trên các giới hạn nêu trên, nhóm đề xuất năm hướng phát triển tiếp theo:
 
 \begin{enumerate}
-    \item \textbf{Chứng thực nối tiếp.} Thay vì dựng lại và kiểm tra toàn bộ release mỗi đêm, chỉ xử lý các partition có dữ liệu thay đổi và tái sử dụng bằng chứng của các partition không đổi. Hướng này giảm chi phí tính toán khi dữ liệu lịch sử tăng mà vẫn giữ nguyên bảo đảm về tính đúng đắn.
-    \item \textbf{Mở rộng thực nghiệm.} Lặp lại các thực nghiệm nhiều lần để báo cáo khoảng tin cậy, đo trên cụm nhiều nút, và bổ sung phương án Google BigQuery/BigLake để so sánh chi phí--hiệu năng với ClickHouse tự vận hành.
+    \item \textbf{Đối soát độc lập với Flink.} Bổ sung vào tầng Silver một phép so sánh giá trị giữa bản ghi \texttt{raw} và bản ghi \texttt{clean} tương ứng (số tiền, định danh, thời gian sự kiện), để một lỗi logic trong Flink bị phát hiện ngay cả khi không có oracle tính từ file nguồn.
+    \item \textbf{Kiểm chứng nối tiếp.} Thay vì dựng lại và kiểm tra toàn bộ release mỗi đêm, chỉ xử lý các partition có dữ liệu thay đổi và tái sử dụng bằng chứng của các partition không đổi. Hướng này giảm chi phí tính toán khi dữ liệu lịch sử tăng mà vẫn giữ nguyên bảo đảm về tính đúng đắn.
+    \item \textbf{Mở rộng thực nghiệm.} Lặp lại các thực nghiệm nhiều lần để báo cáo khoảng tin cậy, đo trên cụm nhiều nút, đo độ trễ API trên story-demo, thử PostgreSQL với \texttt{CLUSTER} và chỉ mục bao phủ, và bổ sung phương án Google BigQuery/BigLake để so sánh chi phí và hiệu năng với ClickHouse tự vận hành.
     \item \textbf{Mô hình dự báo trên Customer 360.} Xây dựng mô hình dự báo khả năng rời bỏ (\emph{churn}) và giá trị vòng đời khách hàng (CLV) dựa trên các đặc trưng RFM và cohort đã có, để chuyển từ phân tích mô tả sang phân tích dự báo.
     \item \textbf{Hoàn thiện quyền riêng tư và đánh giá người dùng.} Mã hóa các trường liên hệ, tự động hóa yêu cầu truy cập và xóa dữ liệu của chủ thể theo Luật 91/2025/QH15, và thực hiện thử nghiệm với người dùng đại diện cho từng vai trò theo phiếu đã chuẩn bị.
 \end{enumerate}
