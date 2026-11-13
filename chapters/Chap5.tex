@@ -32,11 +32,32 @@ Với $N$ bản ghi đầu vào, $t^{\mathrm{send}}_i$ là thời điểm bản 
 
 \subsection{Hệ thống kiểm thử tự động}
 \label{sec:c5-kiem-thu}
-Kho mã có 683 hàm kiểm thử Python, 35 kiểm thử Java cho job Flink, 4 kiểm thử Java cho job đánh giá, 31 kiểm thử dữ liệu dbt và 20 file đặc tả kiểm thử giao diện bằng Playwright. Kiểm thử bao phủ toàn bộ đường ống: tính tất định của dữ liệu sinh, hợp đồng Kafka, thứ tự và tốc độ phát lại, khử trùng lặp, sự kiện trễ, phiên, chỉ số chiến dịch, quá trình nạp Bronze, quản trị Silver, các mô hình Gold, công bố và toàn bộ API. Ngoài kiểm thử đơn vị, các kịch bản Docker thật kiểm tra phục hồi sau sự cố, khởi động lại catalog/lưu trữ và dựng lại lịch sử cô lập.
+Kho mã có 689 kiểm thử Python, 35 kiểm thử Java cho job Flink, 4 kiểm thử Java cho job đánh giá, 31 kiểm thử dữ liệu dbt và 20 file đặc tả kiểm thử giao diện bằng Playwright. Kiểm thử bao phủ toàn bộ đường ống: tính tất định của dữ liệu sinh, hợp đồng Kafka, thứ tự và tốc độ phát lại, khử trùng lặp, sự kiện trễ, phiên, chỉ số chiến dịch, quá trình nạp Bronze, quản trị Silver, các mô hình Gold, công bố và toàn bộ API. Ngoài kiểm thử đơn vị, các kịch bản Docker thật kiểm tra phục hồi sau sự cố, khởi động lại catalog/lưu trữ và dựng lại lịch sử cô lập.
+
+Bảng~\ref{tab:test-results} ghi kết quả chạy thật của các bộ kiểm thử. Bộ kiểm thử Python được chạy lại ngày 13/11/2026 trên commit \texttt{dbe614b}, môi trường Linux (WSL2) với Python 3.12.11: 641 kiểm thử đạt, 41 kiểm thử bỏ qua và 7 kiểm thử không đạt. 41 kiểm thử bỏ qua là kiểm thử tích hợp, chỉ chạy khi được bật bằng biến môi trường và có PostgreSQL, ClickHouse, Dagster hoặc Spark thật. Cả 7 kiểm thử không đạt đều gọi lệnh \texttt{docker compose config} để kiểm tra file cấu hình Compose và thất bại vì máy chạy kiểm thử không có Docker Engine đang hoạt động, không phải do lỗi logic của hệ thống. 31 kiểm thử dbt đều đạt trong lần kiểm chứng release story-demo (lượt chạy \texttt{2d216b87}), vì quy trình công bố dừng ngay khi \texttt{dbt build} có kiểm thử thất bại. Các kiểm thử Java và Playwright chưa được chạy lại trong khuôn khổ báo cáo này.
+
+\begin{table}[H]
+\centering
+\caption{Kết quả chạy các bộ kiểm thử tự động}
+\label{tab:test-results}
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{4.6cm} >{\raggedleft\arraybackslash}p{2.1cm} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Bộ kiểm thử} & \textbf{Số lượng} & \textbf{Kết quả} \\
+\midrule
+Python (\texttt{unittest}, Linux, 13/11/2026) & 689 & 641 đạt, 41 bỏ qua (tích hợp), 7 không đạt (cần Docker Engine) \\
+dbt (release story-demo \texttt{2d216b87}) & 31 & 31 đạt \\
+Java, job Flink & 35 & Chưa chạy lại \\
+Java, job đánh giá & 4 & Chưa chạy lại \\
+Playwright, giao diện & 20 file & Chưa chạy lại \\
+\bottomrule
+\end{tabularx}
+\end{table}
 
 \subsection{Đối soát độc lập trên story-demo}
 \label{sec:c5-oracle}
-Script \texttt{story\_demo\_oracle.py} tính lại các chỉ số từ chính file nguồn của bộ sinh (không qua đường ống) rồi so với release đã kiểm chứng trên ClickHouse. Kết quả: \textbf{386/386 phép kiểm tra bằng nhau} (Bảng~\ref{tab:correctness}). Chênh lệch duy nhất giữa dữ liệu thô và dữ liệu đã kiểm chứng được giải thích trọn vẹn bởi quản trị: \num{33858} đơn hàng thô so với \num{32774} đơn đã kiểm chứng, chênh đúng \num{1084} đơn hàng không có đồng thuận phân tích.
+Script \texttt{story\_demo\_oracle.py} tính lại các chỉ số từ chính file nguồn của bộ sinh (không qua đường ống) rồi so với dữ liệu của hệ thống: 322 phép kiểm tra so với release đã kiểm chứng trên ClickHouse và 64 phép kiểm tra so với tầng Silver, đọc qua Spark. Kết quả: \textbf{386/386 phép kiểm tra bằng nhau} (Bảng~\ref{tab:correctness}). Chênh lệch duy nhất giữa dữ liệu thô và dữ liệu đã kiểm chứng được giải thích trọn vẹn bởi quản trị: \num{33858} đơn hàng thô so với \num{32774} đơn đã kiểm chứng, chênh đúng \num{1084} đơn hàng không có đồng thuận phân tích.
 
 \begin{table}[H]
 \centering
@@ -49,9 +70,9 @@ Script \texttt{story\_demo\_oracle.py} tính lại các chỉ số từ chính f
 \textbf{Tập dữ liệu} & \textbf{Phép kiểm tra} & \textbf{Kết quả} \\
 \midrule
 Fixture & Doanh thu gộp \num{27160000}, hoàn \num{4967000}, ròng \num{22193000} VND bảo toàn qua cả ba mô hình phân bổ & Khớp tuyệt đối \\
-Story-demo & Hiển thị, click, chi phí của 4 nền tảng $\times$ 20 tháng (240 phép kiểm tra) & 240/240 \\
-Story-demo & Đơn hàng, doanh thu gộp, hoàn tiền theo tháng; doanh thu phân bổ theo nền tảng; doanh thu theo 13 tỉnh/thành và nhóm ẩn danh & Khớp, tổng cộng 386/386 \\
-Story-demo (Silver) & Email theo loại $\times$ tháng; phiên theo nguồn truy cập sau quản trị & 60/60, khớp \\
+Story-demo (release) & Hiển thị, click, chi phí của 4 nền tảng $\times$ 20 tháng & 240/240 \\
+Story-demo (release) & Đơn hàng, doanh thu gộp, hoàn tiền theo tháng (60); đơn hàng và doanh thu gộp theo nền tảng của click trên đơn hàng (8); doanh thu theo 13 tỉnh/thành và nhóm ẩn danh (14) & 82/82 \\
+Story-demo (Silver) & Số email đã gửi theo loại $\times$ tháng (60); phiên theo nguồn truy cập sau quản trị (4) & 64/64 \\
 Live View & Khách truy cập, phiên, đơn hàng, doanh thu so với file nguồn tại cùng thời điểm phát lại & Khớp tuyệt đối \\
 Evaluation 10k/100k & Mỗi đầu ra đã commit so với oracle Python; mã băm chuẩn hóa đầu vào/đầu ra giữa Flink và Kafka Streams & Khớp ở cả hai quy mô \\
 \bottomrule
@@ -128,7 +149,7 @@ Khi tiến trình xử lý bị dừng đột ngột ở quy mô \texttt{eval-sm
 
 \subsection{Độ trễ truy vấn theo quy mô}
 \label{sec:c5-do-tre-truy-van}
-Hai hệ thống được nạp cùng bảng sự kiện dạng Gold với tiền là số nguyên, ở ba quy mô 1, 10 và 20 triệu dòng, và chạy ba truy vấn đại diện: tổng theo nền tảng (\texttt{platform}), tổng theo chiến dịch và ngày (\texttt{campaign\_day}), và truy vấn lọc theo chiến dịch trong một khoảng ngày (\texttt{filtered}). PostgreSQL được tạo chỉ mục kép \texttt{(campaign, event\_day)}; ClickHouse sắp xếp dữ liệu theo \texttt{(campaign, event\_day, row\_id)}. Mọi lượt đo đều trả về đúng đáp án của oracle.
+Hai hệ thống được nạp cùng một bảng dữ liệu mô phỏng gồm năm cột, sinh tuần hoàn với 64 chiến dịch, 30 ngày và 3 nền tảng, tiền là số nguyên. Bảng có cấu trúc giống tầng Gold nhưng không phải dữ liệu story-demo. Thực nghiệm dùng ba quy mô 1, 10 và 20 triệu dòng và ba truy vấn đại diện: tổng theo nền tảng (\texttt{platform}), tổng theo chiến dịch và ngày (\texttt{campaign\_day}), và truy vấn lọc theo chiến dịch trong một khoảng ngày (\texttt{filtered}). Điều kiện so sánh như sau. PostgreSQL 17.6 dùng cấu hình mặc định của image (\texttt{shared\_buffers} 128~MB), \texttt{max\_parallel\_workers\_per\_gather = 1} và một chỉ mục B-tree trên \texttt{(campaign, event\_day)} tạo sau khi nạp, kèm lệnh \texttt{ANALYZE}; bảng không được sắp xếp lại bằng \texttt{CLUSTER}, không có chỉ mục bao phủ và không phân vùng. ClickHouse dùng động cơ MergeTree với khóa sắp xếp \texttt{(campaign, event\_day, row\_id)}, \texttt{max\_threads = 2} và tắt bộ nhớ đệm truy vấn. Mọi lượt đo đều trả về đúng đáp án của oracle.
 
 \begin{table}[H]
 \centering
@@ -157,7 +178,7 @@ Hai hệ thống được nạp cùng bảng sự kiện dạng Gold với tiề
 \end{tabular}
 \end{table}
 
-Ở 1 triệu dòng, hai hệ thống gần như ngang nhau với truy vấn có chỉ mục (2,86 ms so với 3,28 ms). Khoảng cách nới rộng nhanh khi dữ liệu tăng (Hình~\ref{fig:ch-pg}): ở 20 triệu dòng, ClickHouse nhanh hơn 103,3 lần với \texttt{filtered} (5,02 ms so với 518,54 ms), 7,58 lần với \texttt{platform} và 4,96 lần với \texttt{campaign\_day} xét theo $P_{95}$. Nguyên nhân nằm ở cách lưu trữ: ClickHouse chỉ đọc các cột cần thiết và bỏ qua các khối dữ liệu không thỏa điều kiện nhờ khóa sắp xếp, trong khi PostgreSQL phải đọc từng dòng đầy đủ.
+Ở 1 triệu dòng, hai hệ thống gần như ngang nhau với truy vấn có chỉ mục (2,86 ms so với 3,28 ms). Khoảng cách nới rộng nhanh khi dữ liệu tăng (Hình~\ref{fig:ch-pg}): ở 20 triệu dòng, ClickHouse nhanh hơn 103,3 lần với \texttt{filtered} (5,02 ms so với 518,54 ms), 7,58 lần với \texttt{platform} và 4,96 lần với \texttt{campaign\_day} xét theo $P_{95}$. Nguyên nhân chính nằm ở cách lưu trữ: ClickHouse chỉ đọc các cột cần thiết và bỏ qua các khối dữ liệu không thỏa điều kiện nhờ khóa sắp xếp, trong khi PostgreSQL đọc cả dòng. Riêng mức chênh 103 lần ở \texttt{filtered} còn đến từ thứ tự vật lý của dữ liệu: ClickHouse lưu các dòng của cùng một chiến dịch liền nhau, còn ở PostgreSQL các dòng thỏa điều kiện nằm rải khắp bảng vì dữ liệu được nạp theo thứ tự \texttt{row\_id}, nên dù có chỉ mục vẫn phải đọc gần như mọi trang dữ liệu. Phương án PostgreSQL có \texttt{CLUSTER} theo chỉ mục hoặc có chỉ mục bao phủ chưa được thử, nên kết luận này chỉ áp dụng cho cấu hình PostgreSQL đã nêu.
 
 \begin{figure}[H]
 \centering
@@ -196,33 +217,55 @@ Hai hệ thống được nạp cùng bảng sự kiện dạng Gold với tiề
 \label{sec:c5-tai-nguyen}
 Trong cùng khối lượng truy vấn, PostgreSQL tiêu tốn \num{485.16} giây CPU ở 20 triệu dòng, so với \num{32.75} giây của ClickHouse, tức tiết kiệm khoảng 14,8 lần. Đổi lại, ClickHouse dùng nhiều bộ nhớ hơn (đỉnh khoảng 1~GiB so với \num{534.2}~MiB của PostgreSQL) do xử lý theo khối cột lớn. Kết quả xác nhận cách phân công trong kiến trúc: ClickHouse cho truy vấn phân tích, PostgreSQL cho dữ liệu vận hành cần ràng buộc và giao dịch. Phương án Google BigQuery/BigLake không được đo nên không có kết luận về phương án này.
 
+\section{Thời gian chạy nhánh lô}
+\label{sec:c5-batch-runtime}
+
+Nhánh lô được đo trên story-demo trong một lần chạy ngày 03/11/2026, trên một máy cục bộ có 24~GB bộ nhớ, khác với máy dùng cho các thực nghiệm ở trên; Spark driver được cấp 5~GB và ClickHouse được giới hạn 4~GiB bộ nhớ. Bảng~\ref{tab:batch-runtime} ghi thời gian thực của ba công đoạn chính. Job hằng ngày cho một ngày dữ liệu hoàn tất trong chưa tới 10 phút, đủ để chạy theo lịch lúc 02:00 và công bố số liệu trước giờ làm việc. Đây là phép đo một lần, chưa cho biết thời gian chạy khi khối lượng dữ liệu lớn hơn.
+
+\begin{table}[H]
+\centering
+\caption{Thời gian chạy các công đoạn chính của nhánh lô trên story-demo}
+\label{tab:batch-runtime}
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{4.2cm} >{\raggedright\arraybackslash}X >{\raggedleft\arraybackslash}p{2.9cm}}
+\toprule
+\textbf{Công đoạn} & \textbf{Phạm vi} & \textbf{Thời gian (giây)} \\
+\midrule
+Lưu file nguồn lịch sử vào Bronze & 20 cửa sổ tháng; mỗi cửa sổ gồm 4 file danh mục và 5 file mỗi ngày (CRM, Google, Meta, TikTok, Shopee) & 384 \\
+Job \texttt{marketing\_refresh\_job} cho ngày 31/08/2026 & Nạp Kafka vào Bronze, dựng Silver và Gold, xuất snapshot, nạp CSDL ứng viên, \texttt{dbt build} với 31 kiểm thử, đối soát và công bố & 575 \\
+Công bố dữ liệu hành trình & \num{1164717} sự kiện đã quản trị & 86 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
 \section{Hiệu quả của ứng dụng}
 \label{sec:c5-hieu-qua-ung-dung}
 
 \subsection{Kết quả các tác vụ ra quyết định}
 \label{sec:c5-decision-tasks}
-Hiệu quả của ứng dụng được đánh giá qua mười tác vụ ra quyết định, mỗi tác vụ gắn với một bên liên quan và một bằng chứng kiểm chứng độc lập (Bảng~\ref{tab:decision-tasks}). Một kịch bản tự động đăng nhập với vai trò \texttt{operator}, thực hiện từng tác vụ qua API và đối chiếu kết quả với oracle. Cả mười tác vụ đều đạt, và cấu hình được so sánh trước--sau để bảo đảm không ngân sách, quy tắc, phân đoạn hay bản phát hành nào bị thay đổi ngoài ý muốn.
+Hiệu quả của ứng dụng được đánh giá qua mười tác vụ ra quyết định, mỗi tác vụ gắn với một bên liên quan và một bằng chứng kiểm chứng độc lập (Bảng~\ref{tab:decision-tasks}). Một kịch bản tự động đăng nhập với vai trò \texttt{operator}, thực hiện từng tác vụ qua API và đối chiếu kết quả với oracle. Các tác vụ chạy trên bộ dữ liệu fixture (release \texttt{seed-360}, doanh thu ròng \num{22193000}~VND), không phải story-demo. Cả mười tác vụ đều đạt, và cấu hình được so sánh trước--sau để bảo đảm không ngân sách, quy tắc, phân đoạn hay bản phát hành nào bị thay đổi ngoài ý muốn.
 
 \begin{table}[H]
 \centering
-\caption{Mười tác vụ ra quyết định và kết quả kiểm chứng tự động}
+\caption{Mười tác vụ ra quyết định và kết quả kiểm chứng tự động trên fixture}
 \label{tab:decision-tasks}
 \footnotesize
 \renewcommand{\arraystretch}{1.2}
-\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{1.25cm} >{\raggedright\arraybackslash}p{2.2cm} >{\raggedright\arraybackslash}X >{\centering\arraybackslash}p{1.6cm}}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{1.25cm} >{\raggedright\arraybackslash}p{3.9cm} >{\raggedright\arraybackslash}X >{\centering\arraybackslash}p{1.6cm}}
 \toprule
 \textbf{Mã} & \textbf{Bên liên quan} & \textbf{Tác vụ và quyết định cần đưa ra} & \textbf{Kết quả} \\
 \midrule
-DT-01 & Performance & So sánh KPI trực tiếp với doanh thu ròng đã kiểm chứng, chọn chiến dịch cần xem & Đạt \\
-DT-02 & Performance & Giải thích một cảnh báo vượt ngân sách từ ngưỡng và bằng chứng đã lưu & Đạt \\
-DT-03 & CMO & Đọc tiến độ giải ngân của chiến dịch trong kỳ cấu hình & Đạt \\
-DT-04 & CMO & Mô phỏng phân bổ ngân sách, hiểu giả định tuyến tính & Đạt \\
-DT-05 & Product & Xác định bước rơi rụng lớn trong phễu & Đạt \\
-DT-06 & Analyst & So sánh ba mô hình phân bổ, kiểm tra bảo toàn doanh thu & Đạt \\
-DT-07 & CRM & Xem dòng thời gian hồ sơ đã ẩn danh & Đạt \\
-DT-08 & CRM & Xem trước và lưu phân đoạn, chỉ kích hoạt khách có đồng thuận & Đạt \\
-DT-09 & CRM & Giải thích quần thể cohort và mẫu số hoạt động & Đạt \\
-DT-10 & CRM & Phân biệt khách giá trị cao với quyền được kích hoạt & Đạt \\
+DT-01 & \shPM & So sánh KPI trực tiếp với doanh thu ròng đã kiểm chứng, chọn chiến dịch cần xem & Đạt \\
+DT-02 & \shPM & Giải thích một cảnh báo vượt ngân sách từ ngưỡng và bằng chứng đã lưu & Đạt \\
+DT-03 & \shCMO & Đọc tiến độ giải ngân của chiến dịch trong kỳ cấu hình & Đạt \\
+DT-04 & \shCMO & Mô phỏng phân bổ ngân sách, hiểu giả định tuyến tính & Đạt \\
+DT-05 & \shEC & Xác định bước rơi rụng lớn trong phễu & Đạt \\
+DT-06 & \shDA & So sánh ba mô hình phân bổ, kiểm tra bảo toàn doanh thu & Đạt \\
+DT-07 & \shCRM & Xem dòng thời gian hồ sơ đã ẩn danh & Đạt \\
+DT-08 & \shCRM & Xem trước và lưu phân đoạn, chỉ kích hoạt khách có đồng thuận & Đạt \\
+DT-09 & \shCRM & Giải thích quần thể cohort và mẫu số hoạt động & Đạt \\
+DT-10 & \shCRM & Phân biệt khách giá trị cao với quyền được kích hoạt & Đạt \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -231,26 +274,27 @@ Thời gian API của kịch bản tự động không đồng nghĩa với th�
 
 \subsection{Độ trễ của REST API}
 \label{sec:c5-api-latency}
-Bảng~\ref{tab:api-latency} tổng hợp độ trễ của các API chính, mỗi API đo 100 request HTTP có xác thực sau 20 lượt khởi động. API bảng điều khiển tổng hợp có $P_{95}$ là \num{54.35} ms; các API phân tích và vòng đời có $P_{95}$ từ \num{13.64} ms đến \num{32.39} ms; API minh họa hành trình chậm hơn (\num{77.84} ms) vì phải quét và chuẩn hóa nhiều điểm chạm. Tất cả đều nằm dưới ngưỡng 100 ms, đủ nhanh để người dùng thao tác liên tục mà không cảm thấy chờ.
+Bảng~\ref{tab:api-latency} tổng hợp độ trễ của các API chính trên fixture (615 dòng nguồn, 191 sự kiện đã quản trị); mỗi API được đo bằng 100 request HTTP có xác thực sau 20 lượt khởi động. API bảng điều khiển tổng hợp có $P_{95}$ là \num{54.35} ms; các API phân tích và vòng đời có $P_{95}$ từ \num{13.64} ms đến \num{32.39} ms; API minh họa hành trình chậm hơn (\num{77.84} ms) vì phải quét và chuẩn hóa nhiều điểm chạm. Tất cả đều dưới 100~ms trên fixture. Đây là độ trễ trên một tập dữ liệu nhỏ; độ trễ API trên story-demo (khoảng 1,2 triệu sự kiện) chưa được đo, nên kết quả này chưa chứng minh tốc độ phản hồi ở quy mô lớn hơn.
 
 \begin{table}[H]
 \centering
-\caption{Độ trễ phản hồi của các REST API chính (ms)}
+\caption{Độ trễ phản hồi của các REST API chính trên fixture (ms)}
 \label{tab:api-latency}
 \small
 \renewcommand{\arraystretch}{1.15}
-\begin{tabular}{llrrr}
+\begin{tabular}{lrrr}
 \toprule
-\textbf{API} & \textbf{Tập dữ liệu} & $P_{50}$ & $P_{95}$ & $P_{99}$ / lớn nhất \\
+\textbf{API} & $P_{50}$ & $P_{95}$ & \textbf{Cao nhất}$^{*}$ \\
 \midrule
-Bảng điều khiển tổng hợp & release fixture & \num{37.05} & \num{54.35} & \num{56.12} \\
-Phễu chuyển đổi & fixture & \num{13.85} & \num{26.58} & \num{41.58} \\
-Phân bổ doanh thu & fixture & \num{15.55} & \num{18.96} & \num{30.67} \\
-Hành trình mẫu (5 ví dụ) & fixture & \num{39.17} & \num{77.84} & \num{96.07} \\
-Cohort & fixture & \num{9.53} & \num{13.64} & \num{18.76} \\
-Danh sách hồ sơ & fixture & \num{20.80} & \num{28.53} & \num{34.63} \\
-Dòng thời gian hồ sơ & fixture & \num{19.84} & \num{22.00} & \num{23.11} \\
-Xem trước phân đoạn & fixture & \num{24.80} & \num{32.39} & \num{33.28} \\
+Bảng điều khiển tổng hợp & \num{37.05} & \num{54.35} & \num{56.12} \\
+Phễu chuyển đổi & \num{13.85} & \num{26.58} & \num{41.58} \\
+Phân bổ doanh thu & \num{15.55} & \num{18.96} & \num{30.67} \\
+Hành trình mẫu (5 ví dụ) & \num{39.17} & \num{77.84} & \num{96.07} \\
+Cohort & \num{9.53} & \num{13.64} & \num{18.76} \\
+Danh sách hồ sơ & \num{20.80} & \num{28.53} & \num{34.63} \\
+Dòng thời gian hồ sơ & \num{19.84} & \num{22.00} & \num{23.11} \\
+Xem trước phân đoạn & \num{24.80} & \num{32.39} & \num{33.28} \\
 \bottomrule
+\multicolumn{4}{l}{\footnotesize $^{*}$ Hàng bảng điều khiển ghi $P_{99}$; các hàng còn lại ghi giá trị lớn nhất trong 100 mẫu.} \\
 \end{tabular}
 \end{table}
