@@ -25,7 +25,8 @@
   % Cột 3: ứng dụng và người dùng
   \node[mphead=42mm, right=14mm of mp.east, anchor=west, yshift=14mm] (app) {Marketing\\ Command Center};
   \node[mpbox=42mm, below=of app] (ui) {FastAPI + Next.js\\ 10 không gian làm việc};
-  \node[mpbox=42mm, below=9mm of ui] (users) {\textbf{Các bên liên quan}\\ CMO, Performance, CRM,\\ Analyst, Product,\\ Data Engineer, Privacy};
+  % Tên ngắn của bảy bên liên quan, giống hệt tiêu đề các mục trong Mục 1.2
+  \node[mpbox=42mm, below=9mm of ui] (users) {\textbf{Các bên liên quan}\\ CMO, CRM, DE,\\ Performance Marketing,\\ Data Analyst, E-commerce,\\ Data Owner};
 
   \draw[mparrow] (src.east) -- (mp.west |- src.east);
   \draw[mparrow] (mp.east |- app.west) -- (app.west);

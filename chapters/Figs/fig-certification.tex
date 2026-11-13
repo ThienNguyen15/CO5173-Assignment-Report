@@ -5,8 +5,8 @@
   \node[s, right=of p1] (p2) {\textbf{2. Xuất snapshot}\\ file JSON + manifest\\ có checksum, lưu MinIO};
   \node[s, right=of p2] (p3) {\textbf{3. Nạp ứng viên}\\ CSDL \texttt{mp\_release\_*}\\ 8 bảng \texttt{raw\_*}};
   \node[s, right=of p3] (p4) {\textbf{4. dbt build}\\ 9 mô hình\\ 31 bài kiểm thử};
-  % Hàng 2: chứng nhận và công bố (đi ngược từ phải sang trái)
-  \node[s, below=8mm of p4] (p5) {\textbf{5. Chứng nhận}\\ checksum từng bảng\\ oracle CTR/CPC\\ \texttt{proof\_digest}};
+  % Hàng 2: đối soát và công bố (đi ngược từ phải sang trái)
+  \node[s, below=8mm of p4] (p5) {\textbf{5. Đối soát checksum}\\ checksum từng bảng\\ oracle CTR/CPC\\ \texttt{proof\_digest}};
   \node[s, left=of p5] (p6) {\textbf{6. Ghi sổ cái}\\ \texttt{certified\_bundles}\\ \texttt{publications}\\ (PostgreSQL)};
   \node[s, left=of p6] (p7) {\textbf{7. Công bố}\\ \texttt{publication\_journal}\\ (ClickHouse)};
   \node[mphead=37mm, minimum height=19mm, left=of p7] (p8) {Ứng dụng đọc\\ \texttt{max(generation)}};
