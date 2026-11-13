@@ -126,17 +126,21 @@ Lệnh dùng cờ `-pdf` nhưng thực tế chạy **LuaLaTeX**: dòng `$pdflate
 
 `all-relational-schemas.excalidraw` là sơ đồ gốc của toàn bộ lược đồ dữ liệu. Mở bằng extension **Excalidraw** trong VS Code, hoặc tại <https://excalidraw.com> (*Open*, `Ctrl+O`).
 
-Các ảnh trong `chapters/Pics/` được xuất từ sơ đồ này, mỗi ảnh là một nhóm bảng:
+Các ảnh trong `chapters/Pics/` được xuất từ sơ đồ này. Lược đồ nào quá rộng được tách thành hai ảnh (`-1`, `-2`), mỗi ảnh chứa hai cột bảng, để chữ khi in ra vẫn đạt khoảng 7–8pt:
 
 | Ảnh | Nội dung | Dùng ở |
 |---|---|---|
 | `schema-bronze.png` | Tầng Bronze | Chương 2 |
-| `schema-silver.png` | Tầng Silver | Chương 2 |
-| `schema-gold-serving.png` | Tầng Gold và các mô hình dbt phục vụ | Chương 3 |
-| `schema-postgres.png` | PostgreSQL: `marketpulse_app`, `marketpulse_ops` | Chương 4 |
-| `schema-clickhouse.png` | ClickHouse: nhật ký công bố, journey sidecar, kho trực tiếp | Chương 4 |
+| `schema-silver-1.png` | Silver: `customer_events`, `customers`, `campaigns`, `products` | Chương 2 |
+| `schema-silver-2.png` | Silver: `ad_spend_daily`, `quality_summary` | Chương 2 |
+| `schema-gold-1.png` | Mô hình dbt: `customers`, `customer_360`, `campaigns`, `commerce_daily`, `cohort_retention` | Chương 3 |
+| `schema-gold-2.png` | Mô hình dbt: `campaign_performance_daily`, `campaign_dashboard`, `funnel_daily`, `attribution_daily` | Chương 3 |
+| `schema-postgres-1.png` | PostgreSQL: hai cột bảng bên trái của sơ đồ | Chương 4 |
+| `schema-postgres-2.png` | PostgreSQL: cột bảng bên phải (kiểm toán, cảnh báo, sổ cái công bố) | Chương 4 |
+| `schema-clickhouse-1.png` | ClickHouse: nhật ký công bố và journey sidecar | Chương 4 |
+| `schema-clickhouse-2.png` | ClickHouse: kho trực tiếp `marketpulse_live` | Chương 4 |
 
-Khi sửa sơ đồ: chọn nhóm bảng cần xuất → *Export image* → bật *Only selected*, tỉ lệ **3×**, nền trắng → lưu đè đúng tên file cũ trong `chapters/Pics/`. Build lại là báo cáo cập nhật.
+Khi sửa sơ đồ: chọn đúng các bảng của phần cần xuất (với ảnh tách đôi, chỉ chọn các bảng của phần đó) → *Export image* → bật *Only selected*, tỉ lệ **3×**, nền trắng → lưu đè đúng tên file cũ trong `chapters/Pics/`. Build lại là báo cáo cập nhật.
 
 ## Ghi chú kỹ thuật
 
