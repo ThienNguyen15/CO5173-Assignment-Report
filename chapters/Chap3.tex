@@ -10,11 +10,11 @@ Chương này trình bày bốn cụm công nghệ cốt lõi của MarketPulse 
 
 \subsection{Định nghĩa và vai trò}
 \label{sec:c3-kafka-dinh-nghia}
-Apache Kafka là nền tảng truyền dữ liệu phân tán dựa trên \emph{nhật ký chỉ ghi thêm} (append-only log)~\cite{kreps2011kafka, kafkadocs}. Mỗi topic được chia thành nhiều partition; bản ghi trong một partition có thứ tự và được định vị bằng offset, nên người tiêu thụ có thể đọc lại từ bất kỳ vị trí nào. Trong MarketPulse 360, Kafka 4.3.1 chạy ở chế độ KRaft (không cần ZooKeeper) và đóng vai trò \emph{trục sự kiện chung}: mọi sự kiện đi qua Kafka đúng một lần, rồi được cả nhánh luồng lẫn nhánh lô tiêu thụ độc lập. Apicurio Registry 3.3.3~\cite{apicurio} lưu các hợp đồng dữ liệu (JSON Schema) có phiên bản cho từng topic.
+Apache Kafka là nền tảng truyền dữ liệu phân tán dựa trên \emph{nhật ký chỉ ghi thêm} (append-only log)~\cite{kreps2011kafka, kafkadocs}. Mỗi topic được chia thành nhiều partition; bản ghi trong một partition có thứ tự và được định vị bằng offset, nên người tiêu thụ có thể đọc lại từ bất kỳ vị trí nào. Trong MarketPulse 360, Kafka 4.3.1 chạy ở chế độ KRaft (không cần ZooKeeper) và đóng vai trò \emph{trục sự kiện chung}: mọi sự kiện đều đi qua Kafka trước khi được nhánh luồng và nhánh lô tiêu thụ. Hai nhánh không độc lập hoàn toàn, vì nhánh lô dựng tầng Silver từ đầu ra của Flink (Mục~\ref{sec:c3-lakehouse-co-che}). Apicurio Registry 3.3.3~\cite{apicurio} lưu các hợp đồng dữ liệu (JSON Schema) có phiên bản cho từng topic.
 
 \subsection{Cơ chế hoạt động}
 \label{sec:c3-kafka-co-che}
-Hệ thống dùng mười topic có phiên bản \texttt{v1}, chia thành bốn nhóm theo mức độ xử lý (Bảng~\ref{tab:kafka-topics}). Topic \texttt{raw} nhận dữ liệu nguồn từ công cụ phát lại; topic \texttt{clean} và \texttt{gold} do Flink ghi ra; hai topic \texttt{dlq} chứa bản ghi lỗi ở phía producer và phía Flink. Khóa phân vùng được chọn theo khóa nghiệp vụ (ưu tiên \texttt{customer\_id}, sau đó là \texttt{session\_id}, \texttt{order\_id} hoặc \texttt{message\_id}) để mọi sự kiện của cùng một khách hàng rơi vào cùng partition và giữ nguyên thứ tự.
+Hệ thống dùng mười topic có phiên bản \texttt{v1}, chia thành bốn nhóm theo mức độ xử lý (Bảng~\ref{tab:kafka-topics}). Topic \texttt{raw} nhận dữ liệu nguồn từ công cụ phát lại; topic \texttt{clean} và \texttt{gold} do Flink ghi ra; hai topic \texttt{dlq} chứa bản ghi lỗi ở phía producer và phía Flink. Khóa phân vùng được chọn theo khóa nghiệp vụ: ưu tiên \texttt{customer\_id}, nếu không có thì dùng \texttt{session\_id}, \texttt{order\_id} hoặc \texttt{message\_id} tùy topic. Kafka chỉ giữ thứ tự trong một partition, nên cách chọn khóa này bảo đảm thứ tự cho các sự kiện cùng khóa trong cùng một topic: mọi sự kiện của một khách đã định danh nằm chung một partition, còn sự kiện của khách ẩn danh được nhóm theo phiên. Vì vậy, các phiên khác nhau của cùng một thiết bị ẩn danh có thể nằm ở các partition khác nhau, và Kafka không bảo đảm thứ tự giữa các topic.
 
 \begin{table}[H]
 \centering
@@ -45,7 +45,7 @@ Topic phiên và topic \texttt{gold} dùng chính sách \emph{compact}: Kafka ch
 \subsection{Điểm nổi bật trong MarketPulse 360}
 \label{sec:c3-kafka-hien-thuc}
 \begin{itemize}
-    \item \textbf{Gửi không trùng.} Producer bật \texttt{enable.idempotence} và \texttt{acks=all}; nếu lần gửi bị lỗi, việc gửi lại không tạo bản ghi trùng trong partition.
+    \item \textbf{Gửi lại không tạo bản sao.} Producer bật \texttt{enable.idempotence} và \texttt{acks=all}; nếu một lần gửi bị lỗi và producer tự gửi lại trong cùng phiên, Kafka không ghi thêm bản sao vào partition. Bảo đảm này chỉ áp dụng cho việc gửi lại; bản ghi trùng có sẵn trong dữ liệu nguồn vẫn đi vào Kafka và được Flink, Silver khử trùng sau đó.
     \item \textbf{Phát lại an toàn.} Con trỏ phát lại lưu vị trí đã gửi và gắn với mã băm của manifest dữ liệu. Nếu xác nhận gửi không rõ ràng hoặc thế giới dữ liệu đã thay đổi, công cụ dừng lại thay vì đoán.
     \item \textbf{Tách biệt hợp đồng và dữ liệu.} Hợp đồng JSON Schema được quản lý tập trung, giúp bản ghi lỗi bị chặn ngay ở cửa vào và được chuyển sang DLQ thay vì làm hỏng các bảng phía sau.
 \end{itemize}
@@ -71,7 +71,7 @@ Job \texttt{marketpulse-stream-v1} gồm một chuỗi toán tử có định da
     \item \textbf{Ghi exactly-once.} Một sink Kafka duy nhất định tuyến bản ghi tới đúng topic và ghi theo giao thức two-phase commit với tiền tố giao dịch \texttt{marketpulse-flink-v1-}. Checkpoint chạy mỗi 5 giây ở chế độ exactly-once.
 \end{enumerate}
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
     \centering
     \resizebox{\textwidth}{!}{\input{chapters/Figs/fig-flink-topology}}
     \caption{Topology chuỗi toán tử xử lý luồng có trạng thái trên Apache Flink}
@@ -91,9 +91,11 @@ Kiến trúc \emph{lakehouse} kết hợp chi phí thấp của hồ dữ liệu
 
 \subsection{Cơ chế hoạt động}
 \label{sec:c3-lakehouse-co-che}
-\textbf{Tầng Bronze.} Spark đọc Kafka ở chế độ \texttt{read\_committed} theo một khoảng offset xác định, nên chỉ thấy bản ghi của giao dịch đã commit. Việc ghi dùng \texttt{MERGE} theo khóa \texttt{ingest\_id}; nếu cùng một khóa xuất hiện với nội dung khác, quá trình dừng với lỗi va chạm khóa bất biến. File nguồn được kiểm tra kích thước và mã băm so với manifest trước khi lưu.
+\textbf{Tầng Bronze.} Bronze lưu năm topic: ba topic \texttt{raw}, topic \texttt{clean.customer-events} và topic \texttt{dlq.flink-validation} của Flink; các topic \texttt{gold} không được lưu vì có thể tính lại từ Silver. Spark đọc Kafka ở chế độ \texttt{read\_committed} theo một khoảng offset xác định, nên chỉ thấy bản ghi của giao dịch đã commit. Mỗi lần chạy đọc tiếp từ offset lớn nhất đã có trong Bronze đến offset mới nhất trên broker. Retention 7 ngày của Kafka vì vậy cũng là ràng buộc của nhánh lô: nếu nhánh lô ngừng chạy lâu hơn 7 ngày, các offset cần đọc có thể đã bị Kafka xóa, và lần chạy dừng với lỗi \texttt{Kafka retention gap} (cấu hình \texttt{failOnDataLoss=true}) thay vì âm thầm bỏ sót dữ liệu; khi đó phải phát lại dữ liệu từ nguồn. Bản ghi đã vào Bronze thì được lưu lâu dài trên Iceberg. Việc ghi dùng \texttt{MERGE} theo khóa \texttt{ingest\_id}; nếu cùng một khóa xuất hiện với nội dung khác, quá trình dừng với lỗi va chạm khóa bất biến. File nguồn được kiểm tra kích thước và mã băm so với manifest trước khi lưu.
 
-\textbf{Tầng Silver.} Spark giải mã các sự kiện \texttt{clean}, gom các bản sao theo \texttt{event\_id} và chọn bản thắng theo thứ tự xác định. Phiên bản 1 của hợp đồng \texttt{clean} không mang \texttt{click\_id}, nên Silver nối ngược về bản ghi \texttt{raw} qua bộ ba lineage để khôi phục trường này, đồng thời kiểm tra \texttt{event\_id} hai phía phải trùng nhau. Sự kiện không có đồng thuận phân tích bị loại với mã \texttt{CONSENT\_DENIED}, phiên bot web/app bị loại với mã \texttt{BOT\_EXCLUDED}; mọi quyết định đều được đếm trong \texttt{silver.quality\_summary}.
+\textbf{Tầng Silver.} Spark giải mã các sự kiện \texttt{clean}, gom các bản sao theo \texttt{event\_id} và chọn bản thắng theo thứ tự xác định. Phiên bản 1 của hợp đồng \texttt{clean} không mang \texttt{click\_id}, nên Silver nối ngược về bản ghi \texttt{raw} qua bộ ba lineage để khôi phục trường này, đồng thời kiểm tra \texttt{event\_id} hai phía phải trùng nhau. Sự kiện không có đồng thuận phân tích bị loại với mã \texttt{CONSENT\_DENIED}, sự kiện bị Flink đánh dấu trễ quá ngưỡng bị loại với mã \texttt{LATE\_INELIGIBLE}, phiên bot web/app bị loại với mã \texttt{BOT\_EXCLUDED}; mọi quyết định đều được đếm trong \texttt{silver.quality\_summary}.
+
+\textbf{Phụ thuộc giữa nhánh lô và Flink.} Vì Silver dựng \texttt{silver.customer\_events} từ topic \texttt{clean}, nhánh lô kế thừa các quyết định của Flink: kết quả kiểm tra hợp đồng, cách phân loại sự kiện trễ và giá trị các trường đã chuẩn hóa. Silver có một lớp đối soát với dữ liệu gốc: mọi offset của topic \texttt{raw} phải có đúng một kết cục (nằm trong \texttt{clean}, nằm trong DLQ, hoặc là bản sao của một sự kiện đã nhận), thiếu một offset là cả lô thất bại. Tuy nhiên, Silver không tự tính lại giá trị của từng trường từ dữ liệu \texttt{raw}. Nếu Flink có lỗi logic, chẳng hạn chuẩn hóa sai số tiền, lỗi đó sẽ đi vào số liệu đã kiểm chứng. Trên dữ liệu mô phỏng, lớp kiểm tra độc lập với Flink là oracle story-demo: nó tính lại các chỉ số trực tiếp từ file nguồn của bộ sinh, không đi qua đường ống, và phát hiện được loại lỗi này (Mục~\ref{sec:c5-oracle}). Với dữ liệu thật, cần bổ sung một phép đối soát giá trị độc lập giữa \texttt{raw} và \texttt{clean} (Mục~\ref{sec:c6-huong-phat-trien}).
 
 \textbf{Tầng Gold.} Spark xây dựng sáu bảng phân tích. Phép phân bổ doanh thu tìm các click trả phí của cùng hồ sơ trong cửa sổ 30 ngày trước đơn hàng, rồi chia tiền theo ba mô hình First-Touch, Last-Touch và Linear; đơn hàng không có điểm chạm nào được gán cho \texttt{\_\_unattributed\_\_} để tổng tiền luôn bảo toàn.
 
@@ -135,16 +137,23 @@ Sau khi Gold được xây xong, snapshot được xuất thành file JSON kèm 
 
 \subsection{Tầng Gold và các mô hình dbt}
 \label{sec:c3-gold-schema}
-Hình~\ref{fig:schema-gold} trình bày chín mô hình trong CSDL release, với kiểu dữ liệu ClickHouse. Sáu mô hình là bản sao chính xác của các bảng Iceberg \texttt{gold.*}; \texttt{campaigns} và \texttt{customers} là hai bảng chiều xuất từ Silver; \texttt{campaign\_dashboard} là mart làm giàu từ \texttt{campaign\_performance\_daily} (32 cột) và \texttt{campaigns}, bổ sung tên, trạng thái chiến dịch, CTR và CPC. Khóa ngoại tới \texttt{campaigns} được kiểm thử bởi \texttt{campaign\_relationships}, ngoại trừ giá trị đặc biệt \texttt{\_\_unattributed\_\_}; khóa ngoại tới \texttt{customers} được kiểm thử bởi \texttt{customer\_relationships}. Bảng \texttt{cohort\_retention} được tổng hợp từ \texttt{customer\_360} và hoạt động theo tháng nên được biểu diễn bằng quan hệ dẫn xuất.
+Hình~\ref{fig:schema-gold} và Hình~\ref{fig:schema-gold-2} trình bày chín mô hình trong CSDL release, với kiểu dữ liệu ClickHouse. Sáu mô hình là bản sao chính xác của các bảng Iceberg \texttt{gold.*}; \texttt{campaigns} và \texttt{customers} là hai bảng chiều xuất từ Silver; \texttt{campaign\_dashboard} là mart làm giàu từ \texttt{campaign\_performance\_daily} (32 cột) và \texttt{campaigns}, bổ sung tên, trạng thái chiến dịch, CTR và CPC. Khóa ngoại tới \texttt{campaigns} được kiểm thử bởi \texttt{campaign\_relationships}, ngoại trừ giá trị đặc biệt \texttt{\_\_unattributed\_\_}; khóa ngoại tới \texttt{customers} được kiểm thử bởi \texttt{customer\_relationships}. Bảng \texttt{cohort\_retention} được tổng hợp từ \texttt{customer\_360} và hoạt động theo tháng nên được biểu diễn bằng quan hệ dẫn xuất.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
     \centering
-    \includegraphics[width=\textwidth]{chapters/Pics/schema-gold-serving.png}
-    \caption{Lược đồ quan hệ tầng Gold và 9 mô hình dbt phục vụ trên ClickHouse}
+    \includegraphics[width=\textwidth, height=0.86\textheight, keepaspectratio]{chapters/Pics/schema-gold-1.png}
+    \caption{Lược đồ quan hệ các mô hình dbt phục vụ trên ClickHouse (phần 1): bảng chiều, Customer 360, thương mại và cohort}
     \label{fig:schema-gold}
 \end{figure}
 
-\begin{table}[H]
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=\textwidth, height=0.86\textheight, keepaspectratio]{chapters/Pics/schema-gold-2.png}
+    \caption[Lược đồ quan hệ các mô hình dbt phục vụ trên ClickHouse (phần 2): hiệu quả chiến dịch, phễu và phân bổ]{Lược đồ quan hệ các mô hình dbt phục vụ trên ClickHouse (phần 2): hiệu quả chiến dịch, phễu và phân bổ. Cột \texttt{campaign\_id} của bốn bảng là khóa ngoại tới \texttt{campaigns} ở Hình~\ref{fig:schema-gold}}
+    \label{fig:schema-gold-2}
+\end{figure}
+
+\begin{table}[!htbp]
 \centering
 \caption{Các mô hình dbt và bài kiểm thử chất lượng dữ liệu tự động}
 \label{tab:dbt}
@@ -174,7 +183,7 @@ Hình~\ref{fig:schema-gold} trình bày chín mô hình trong CSDL release, vớ
 \subsection{Điểm nổi bật trong MarketPulse 360}
 \label{sec:c3-dagster-hien-thuc}
 \begin{itemize}
-    \item \textbf{Kiểm chứng trên dữ liệu thật của release.} Ngoài 31 bài kiểm thử dbt, bước chứng nhận tính checksum cho toàn bộ dòng của từng bảng và so với checksum lúc xuất, tính lại CTR, CPC bằng một oracle độc lập, rồi gộp mọi bằng chứng thành \texttt{proof\_digest}.
+    \item \textbf{Kiểm chứng trên dữ liệu thật của release.} Ngoài 31 bài kiểm thử dbt, bước đối soát checksum (bước 5 trong Hình~\ref{fig:certification}) tính checksum cho toàn bộ dòng của từng bảng và so với checksum lúc xuất, tính lại CTR, CPC bằng một oracle độc lập, rồi gộp mọi bằng chứng thành \texttt{proof\_digest}.
     \item \textbf{Công bố nguyên tử và đơn điệu.} Sổ cái PostgreSQL \texttt{marketpulse\_ops} giữ khóa tư vấn (advisory lock) khi đặt chỗ công bố và từ chối bản phát hành của một ngày logic cũ hơn bản đã công bố. Bản ghi được nối vào \texttt{publication\_journal} trên ClickHouse rồi mới được xác nhận; ứng dụng luôn đọc bản có \texttt{generation} lớn nhất. Một tiến trình công bố chậm vì thế không thể ``kéo lùi'' người đọc về bản cũ.
     \item \textbf{Không tái sử dụng ứng viên dở dang.} Mỗi lần nạp tạo một CSDL mới theo số lần thử; một CSDL nạp dở không bao giờ được dùng lại.
 \end{itemize}
@@ -204,7 +213,7 @@ $r$ điểm chạm sớm nhất nhận thêm 1 đồng: phần phân bổ là \n
 
 \subsection{Ví dụ 4: Chặn bản phát hành lỗi}
 \label{sec:c3-vi-du-4}
-Kiểm thử phương trình tài chính chỉ bắt được dòng có gộp $-$ hoàn $\neq$ ròng. Một lỗi tinh vi hơn là dữ liệu bị sửa \emph{nhất quán}: số dòng không đổi và phương trình vẫn cân. API \texttt{POST /api/v1/ops/quality/probe} (chỉ dành cho \texttt{admin}) tái hiện đúng tình huống này một cách an toàn: hệ thống sao chép release đang phục vụ sang một CSDL dùng một lần \texttt{mp09\_probe\_<uuid>}, cộng thêm 1 đồng vào cả doanh thu gộp lẫn doanh thu ròng của một dòng trong \texttt{campaign\_performance\_daily}, rồi chạy lại các phép kiểm chứng. Lỗi bị phát hiện ở hai lớp độc lập: checksum của bảng không còn khớp với checksum đã chứng nhận, và tổng doanh thu không còn khớp với tổng tính trực tiếp từ sự kiện đơn hàng. Báo cáo kết luận \texttt{controlled\_same\_count\_finance\_corruption\_detected}, CSDL thử nghiệm bị xóa, còn release đang phục vụ không bị đụng tới. Trong quá trình kiểm chứng thật, các lỗi tương tự, như dòng tiền bị sửa với số dòng không đổi hoặc tham chiếu chiến dịch không tồn tại, đều làm bản ứng viên bị từ chối.
+Kiểm thử phương trình tài chính chỉ bắt được dòng có gộp $-$ hoàn $\neq$ ròng. Một lỗi tinh vi hơn là dữ liệu bị sửa \emph{nhất quán}: số dòng không đổi và phương trình vẫn cân. API \texttt{POST /api/v1/ops/quality/probe} (chỉ dành cho \texttt{admin}) tái hiện đúng tình huống này một cách an toàn: hệ thống sao chép release đang phục vụ sang một CSDL dùng một lần \texttt{mp09\_probe\_<uuid>}, cộng thêm 1 đồng vào cả doanh thu gộp lẫn doanh thu ròng của một dòng trong \texttt{campaign\_performance\_daily}, rồi chạy lại các phép kiểm chứng. Lỗi bị phát hiện ở hai lớp độc lập: checksum của bảng không còn khớp với checksum đã ghi lúc xuất, và tổng doanh thu không còn khớp với tổng tính trực tiếp từ sự kiện đơn hàng. Báo cáo kết luận \texttt{controlled\_same\_count\_finance\_corruption\_detected}, CSDL thử nghiệm bị xóa, còn release đang phục vụ không bị đụng tới. Trong quá trình kiểm chứng thật, các lỗi tương tự, như dòng tiền bị sửa với số dòng không đổi hoặc tham chiếu chiến dịch không tồn tại, đều làm bản ứng viên bị từ chối.
 
 \subsection{Ví dụ 5: Tái tạo lịch sử từ Iceberg snapshot}
 \label{sec:c3-vi-du-5}
