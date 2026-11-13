@@ -44,7 +44,7 @@ Dữ liệu do người dùng ứng dụng tạo ra (tài khoản, cấu hình, 
 
 \subsection{Lược đồ marketpulse\_app (PostgreSQL)}
 \label{sec:c4-pg-app}
-Lược đồ \texttt{marketpulse\_app} có 12 bảng, chia thành bốn nhóm (Hình~\ref{fig:schema-postgres}):
+Lược đồ \texttt{marketpulse\_app} có 12 bảng, chia thành bốn nhóm (Hình~\ref{fig:schema-postgres} và Hình~\ref{fig:schema-postgres-2}):
 
 \begin{itemize}
     \item \textbf{Bảo mật:} \texttt{auth\_users}, \texttt{auth\_sessions} (khóa ngoại tới người dùng), \texttt{login\_failures} (bộ đếm theo cửa sổ 15 phút) và \texttt{access\_audit} (nhật ký bất biến).
@@ -59,22 +59,36 @@ Lược đồ \texttt{marketpulse\_app} có 12 bảng, chia thành bốn nhóm (
 \label{sec:c4-pg-ops}
 Lược đồ \texttt{marketpulse\_ops} nằm trên một instance PostgreSQL riêng của khối batch và gồm 4 bảng sổ cái của quy trình công bố. \texttt{preparations} lưu phiếu chuẩn bị bất biến; \texttt{publications} và \texttt{certified\_bundles} có quan hệ 1--0..1 với \texttt{preparations} qua khóa ngoại thật; \texttt{attempts} đếm số lần thử theo giai đoạn và được tham chiếu mềm, vì lần thử đầu tiên được cấp \emph{trước} khi phiếu chuẩn bị tồn tại.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
     \centering
-    \includegraphics[width=0.8\textwidth]{chapters/Pics/schema-postgres.png}
-    \caption{Lược đồ quan hệ PostgreSQL: marketpulse\_app và marketpulse\_ops}
+    \includegraphics[width=\textwidth, height=0.88\textheight, keepaspectratio]{chapters/Pics/schema-postgres-1.png}
+    \caption{Lược đồ quan hệ PostgreSQL (phần 1): tài khoản, phân đoạn, cấu hình chiến dịch, quy tắc cảnh báo và chuẩn bị công bố}
     \label{fig:schema-postgres}
+\end{figure}
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=\textwidth, height=0.88\textheight, keepaspectratio]{chapters/Pics/schema-postgres-2.png}
+    \caption[Lược đồ quan hệ PostgreSQL (phần 2): kiểm toán truy cập, kết quả cảnh báo và sổ cái công bố]{Lược đồ quan hệ PostgreSQL (phần 2): kiểm toán truy cập, kết quả cảnh báo và sổ cái công bố. Khóa ngoại sang phần 1: \texttt{alert\_evaluations} tới \texttt{alert\_rules}; \texttt{publications} và \texttt{certified\_bundles} tới \texttt{preparations}}
+    \label{fig:schema-postgres-2}
 \end{figure}
 
 \subsection{Các bảng phục vụ trên ClickHouse}
 \label{sec:c4-clickhouse}
-Ngoài các CSDL release, ClickHouse còn chứa ba nhóm bảng phục vụ ứng dụng (Hình~\ref{fig:schema-clickhouse}). \texttt{marketpulse\_serving.publication\_journal} là nhật ký chỉ ghi thêm, phản chiếu bảng \texttt{publications} của sổ cái; \texttt{journey\_publications} ghi nhận CSDL hành trình của từng release. Trong CSDL sidecar, bảng \texttt{events} lưu hành trình đã ẩn danh và view \texttt{paid\_touches} chọn click trả phí đầu tiên cho mỗi cặp \texttt{(profile\_ref, click\_id)}. Kho \texttt{marketpulse\_live} gồm \texttt{campaign\_snapshots} (MergeTree), \texttt{events} (ReplacingMergeTree theo \texttt{(partition, offset)}) và hai bảng một dòng ghim định danh nguồn Kafka: nếu cụm Kafka hoặc topic bị thay đổi, worker từ chối ghi thay vì trộn hai nguồn.
+Ngoài các CSDL release, ClickHouse còn chứa ba nhóm bảng phục vụ ứng dụng (Hình~\ref{fig:schema-clickhouse} và Hình~\ref{fig:schema-clickhouse-2}). \texttt{marketpulse\_serving.publication\_journal} là nhật ký chỉ ghi thêm, phản chiếu bảng \texttt{publications} của sổ cái; \texttt{journey\_publications} ghi nhận CSDL hành trình của từng release. Trong CSDL sidecar, bảng \texttt{events} lưu hành trình đã ẩn danh và view \texttt{paid\_touches} chọn click trả phí đầu tiên cho mỗi cặp \texttt{(profile\_ref, click\_id)}. Kho \texttt{marketpulse\_live} gồm \texttt{campaign\_snapshots} (MergeTree), \texttt{events} (ReplacingMergeTree theo \texttt{(partition, offset)}) và hai bảng một dòng ghim định danh nguồn Kafka: nếu cụm Kafka hoặc topic bị thay đổi, worker từ chối ghi thay vì trộn hai nguồn.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
     \centering
-    \includegraphics[width=\textwidth]{chapters/Pics/schema-clickhouse.png}
-    \caption{Lược đồ quan hệ các bảng ClickHouse phục vụ, journey sidecar và kho dữ liệu trực tiếp}
+    \includegraphics[width=\textwidth]{chapters/Pics/schema-clickhouse-1.png}
+    \caption{Lược đồ quan hệ ClickHouse (phần 1): nhật ký công bố và CSDL hành trình (journey sidecar)}
     \label{fig:schema-clickhouse}
+\end{figure}
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.92\textwidth]{chapters/Pics/schema-clickhouse-2.png}
+    \caption{Lược đồ quan hệ ClickHouse (phần 2): kho dữ liệu trực tiếp \texttt{marketpulse\_live}}
+    \label{fig:schema-clickhouse-2}
 \end{figure}
 
 \section{Giao diện và yêu cầu nghiệp vụ}
@@ -101,7 +115,7 @@ Live View & \texttt{/live} & Khách truy cập, phiên, đơn hàng của ngày 
 Ad Performance & \texttt{/ads} & Chi phí, click, ROAS theo nền tảng và chiến dịch \\
 Analysis & \texttt{/analysis} & Phễu chuyển đổi, so sánh mô hình phân bổ, hành trình mẫu \\
 Customers & \texttt{/customers} & Customer 360, dòng thời gian, phân đoạn, cohort, cơ hội và rủi ro \\
-Email & \texttt{/email} & Lượng gửi, người nhận, tỷ lệ mở và click theo loại email \\
+Email & \texttt{/email} & Số email đã gửi, đã nhận, được mở, được click, số lượt hủy đăng ký, số người nhận, tỷ lệ mở và click theo tháng \\
 Insights & \texttt{/insights} & Nhịp hoạt động theo giờ, giá trị đơn hàng, kênh, khách hàng trung thành \\
 Products & \texttt{/products} & Doanh thu theo ngành hàng và thiết bị \\
 Geography & \texttt{/geography} & Doanh thu ròng theo 13 tỉnh/thành phố trên bản đồ Việt Nam \\
@@ -120,7 +134,7 @@ Data Health & \texttt{/operations} & Sức khỏe hệ thống, kiểm chứng c
 
 \subsection{Phân bổ doanh thu (BR-01)}
 \label{sec:c4-br01}
-Trong 20 tháng lịch sử, bốn nền tảng ghi nhận \num{2614669} lượt hiển thị, \num{227830} click và tổng chi phí \num{1339776177}~VND. Hình~\ref{fig:channels} đặt cạnh nhau tỷ trọng chi phí và doanh thu gộp được phân bổ cho từng nền tảng. Shopee Ads chỉ chiếm 18,7\% chi phí nhưng được phân bổ doanh thu gộp cao nhất (\num{20,54}~tỷ VND từ \num{9158} đơn), trong khi Google Ads chiếm tỷ trọng chi phí lớn nhất (29,7\%) nhưng doanh thu phân bổ chỉ đứng thứ ba. Đây chính là loại phát hiện mà một báo cáo riêng lẻ của từng nền tảng không thể đưa ra, và là cơ sở để CMO xem xét chuyển ngân sách. Màn hình Analysis cho phép so sánh kết quả này giữa ba mô hình First-Touch, Last-Touch và Linear trước khi quyết định.
+Trong 20 tháng lịch sử, bốn nền tảng ghi nhận \num{2614669} lượt hiển thị, \num{227830} click và tổng chi phí \num{1339776177}~VND. Hình~\ref{fig:channels} đặt cạnh nhau tỷ trọng chi phí và tỷ trọng doanh thu gộp của từng nền tảng. Doanh thu ở đây được ghi nhận theo chiến dịch của click quảng cáo trả phí gắn trên chính đơn hàng (click của phiên mua hàng, hoặc click trả phí gần nhất trong 7 ngày trước đó), không theo mô hình First-Touch, Last-Touch hay Linear. Bốn nền tảng được ghi nhận tổng cộng \num{65,20}~tỷ VND trên \num{29059} đơn; \num{8,29}~tỷ VND còn lại (11,3\% doanh thu gộp, \num{3715} đơn) thuộc các đơn không có click trả phí nào trong 7 ngày trước khi mua nên không gắn với nền tảng nào. Shopee Ads chỉ chiếm 18,7\% chi phí nhưng mang về 31,5\% doanh thu gộp (\num{20,54}~tỷ VND từ \num{9158} đơn), trong khi Google Ads chiếm tỷ trọng chi phí lớn nhất (29,7\%) nhưng chỉ đóng góp 22,5\% doanh thu. Đây chính là loại phát hiện mà báo cáo riêng của từng nền tảng không thể đưa ra, và là cơ sở để \shCMO{} xem xét chuyển ngân sách. Trước khi quyết định, màn hình Analysis cho phép xem cùng phần doanh thu này được ba mô hình phân bổ ghi nhận khác nhau ra sao.
 
 \begin{figure}[H]
 \centering
@@ -138,16 +152,16 @@ Trong 20 tháng lịch sử, bốn nền tảng ghi nhận \num{2614669} lượt
 \begin{axis}[
     at={(left.east)}, anchor=west, xshift=1.6cm,
     xbar, width=0.43\textwidth, height=5.2cm, bar width=9pt,
-    xmin=0, xmax=25, xlabel={Doanh thu gộp được phân bổ (tỷ VND)},
-    ytick={1,2,3,4}, yticklabels={Shopee,TikTok,Meta,Google}, 
+    xmin=0, xmax=36, xlabel={Tỷ trọng doanh thu gộp (\%)},
+    ytick={1,2,3,4}, yticklabels={Shopee,TikTok,Meta,Google},
     nodes near coords, nodes near coords align={horizontal},
     every node near coord/.append style={font=\scriptsize},
     tick label style={font=\footnotesize}, label style={font=\footnotesize},
     axis x line*=bottom, axis y line*=left, enlarge y limits=0.2]
-  \addplot[fill=mpaccent, draw=mpline] coordinates {(14.64,4) (16.68,3) (13.34,2) (20.54,1)};
+  \addplot[fill=mpaccent, draw=mpline] coordinates {(22.5,4) (25.6,3) (20.5,2) (31.5,1)};
 \end{axis}
 \end{tikzpicture}
-\caption{Tỷ trọng chi phí và doanh thu gộp được phân bổ theo nền tảng quảng cáo (01/2025 -- 08/2026)}
+\caption[Tỷ trọng chi phí và tỷ trọng doanh thu gộp theo nền tảng quảng cáo]{Tỷ trọng chi phí và tỷ trọng doanh thu gộp theo nền tảng quảng cáo, 01/2025 đến 08/2026. Doanh thu ghi nhận theo click trả phí gắn trên đơn hàng; mẫu số là \num{65,20}~tỷ VND doanh thu của bốn nền tảng}
 \label{fig:channels}
 \end{figure}
 
@@ -247,7 +261,7 @@ Quản trị dữ liệu thể hiện trực tiếp trên số liệu: \num{1084
 \label{sec:c4-doi-chieu}
 Bảng~\ref{tab:br-trace} truy vết mỗi yêu cầu nghiệp vụ tới màn hình, API và dữ liệu đã hiện thực.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
 \caption{Truy vết yêu cầu nghiệp vụ tới màn hình, API (tiền tố \texttt{/api/v1}) và dữ liệu}
 \label{tab:br-trace}
