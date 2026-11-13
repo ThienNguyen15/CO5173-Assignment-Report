@@ -30,7 +30,7 @@ Bài toán đặt ra hai yêu cầu kéo hệ thống về hai hướng ngược
 
 \begin{itemize}
     \item \textbf{Tốc độ (độ trễ thấp).} Khi một chiến dịch đột ngột tăng chi phí hoặc tỷ lệ chuyển đổi sụt giảm, người quản lý quảng cáo cần biết trong vài giây đến vài phút chứ không phải sáng hôm sau. Yêu cầu này đòi hỏi xử lý luồng có trạng thái: khử trùng lặp, gom phiên và cập nhật chỉ số chiến dịch ngay khi sự kiện đến.
-    \item \textbf{Độ chính xác được kiểm chứng.} Số liệu dùng để phân bổ ngân sách và báo cáo tài chính phải nối đúng hành trình khách hàng trong cửa sổ 30 ngày, loại bỏ phiên bot, tôn trọng lựa chọn đồng thuận (\texttt{consent\_analytics}, \texttt{consent\_marketing}) và cân khớp doanh thu ròng đến từng đồng. Những phép tính này cần dữ liệu lịch sử đầy đủ, dữ liệu đến trễ và khả năng tính lại.
+    \item \textbf{Độ chính xác được kiểm chứng.} Số liệu dùng để phân bổ ngân sách và báo cáo tài chính phải nối đúng hành trình của khách hàng trong 30 ngày trước khi mua, loại bỏ các lượt truy cập do bot tạo ra, chỉ dùng dữ liệu của những khách hàng đã đồng ý cho phép phân tích (và chỉ gửi nội dung marketing cho người đã đồng ý nhận), đồng thời cân khớp doanh thu ròng đến từng đồng. Những phép tính này cần dữ liệu lịch sử đầy đủ, xử lý được dữ liệu đến trễ và cho phép tính lại khi cần.
 \end{itemize}
 
 Không một công cụ đơn lẻ nào đáp ứng được cả hai. MarketPulse 360 giải quyết bằng cách tách hai loại số liệu một cách tường minh: số liệu \emph{trực tiếp} (tạm thời, cập nhật liên tục) và số liệu \emph{đã kiểm chứng} (chỉ được công bố sau khi vượt qua toàn bộ kiểm thử và đối soát). Hai loại số liệu không bao giờ bị cộng lẫn vào nhau trên giao diện.
@@ -38,76 +38,74 @@ Không một công cụ đơn lẻ nào đáp ứng được cả hai. MarketPul
 \section{Các bên liên quan}
 \label{sec:c1-stakeholders}
 
-Bảy nhóm người dùng được xác định từ quy trình ra quyết định marketing của một doanh nghiệp bán lẻ. Mỗi nhóm có câu hỏi riêng và cần dữ liệu ở độ chi tiết, độ trễ khác nhau.
+Bảy nhóm người dùng được xác định từ quy trình ra quyết định marketing của một doanh nghiệp bán lẻ. Mỗi nhóm có câu hỏi riêng và cần dữ liệu ở độ chi tiết, độ trễ khác nhau. Tên ngắn trong ngoặc ở tiêu đề mỗi mục là tên được dùng thống nhất trong toàn bộ báo cáo, kể cả trong các hình và bảng. Cuối mỗi mục liệt kê các yêu cầu nghiệp vụ (Mục~\ref{sec:c1-business-requirements}) phục vụ nhóm người dùng đó.
 
 \subsection{Giám đốc Marketing (CMO)}
 \label{sec:c1-sh-cmo}
-Chịu trách nhiệm phân bổ tổng ngân sách giữa các kênh. CMO cần biết kênh nào tạo ra doanh thu ròng thực sự (sau hoàn tiền), tiến độ giải ngân so với kế hoạch và kết quả dự kiến khi chuyển ngân sách giữa các chiến dịch. Dữ liệu cần ở mức tổng hợp theo ngày, phải được kiểm chứng và có thể giải thích.
+Chịu trách nhiệm phân bổ tổng ngân sách giữa các kênh. CMO cần biết kênh nào tạo ra doanh thu ròng thực sự (sau hoàn tiền), tiến độ giải ngân so với kế hoạch và kết quả dự kiến khi chuyển ngân sách giữa các chiến dịch. Dữ liệu cần ở mức tổng hợp theo ngày, phải được kiểm chứng và có thể giải thích. Yêu cầu liên quan: \BR{01}, \BR{03}, \BR{04}, \BR{05}, \BR{06}.
 
 \subsection{Quản lý quảng cáo (Performance Marketing)}
 \label{sec:c1-sh-performance}
-Vận hành chiến dịch hằng ngày. Người này cần chỉ số chiến dịch gần thời gian thực (phiên, đơn hàng, doanh thu theo chiến dịch), cảnh báo khi chi phí tăng đột biến hoặc vượt ngân sách, kèm bằng chứng để quyết định tạm dừng hay điều chỉnh giá thầu.
+Vận hành chiến dịch hằng ngày trên các nền tảng quảng cáo. Người này cần chỉ số chiến dịch gần thời gian thực (phiên, đơn hàng, doanh thu theo chiến dịch) và cảnh báo khi chi phí tăng đột biến hoặc vượt ngân sách, kèm bằng chứng để quyết định tạm dừng hay điều chỉnh giá thầu. Yêu cầu liên quan: \BR{02}, \BR{03}, \BR{04}.
 
-\subsection{Chuyên viên CRM (Lifecycle Marketing)}
+\subsection{Chuyên viên quan hệ khách hàng (CRM)}
 \label{sec:c1-sh-crm}
-Cần hồ sơ khách hàng hợp nhất (Customer 360), phân đoạn theo hành vi mua (RFM), mức độ tương tác email và danh sách khách hàng có cơ hội mua thêm hoặc có nguy cơ rời bỏ. Yêu cầu quan trọng là chỉ được kích hoạt khách hàng đã đồng ý nhận marketing.
+Phụ trách vòng đời khách hàng sau lần mua đầu tiên. Người này cần hồ sơ khách hàng hợp nhất (Customer 360), phân đoạn theo hành vi mua (RFM), mức độ tương tác với email và danh sách khách hàng có cơ hội mua thêm hoặc có nguy cơ rời bỏ. Ràng buộc quan trọng nhất là chỉ được chọn để chăm sóc những khách hàng đã đồng ý nhận thông tin marketing. Yêu cầu liên quan: \BR{08}, \BR{09}.
 
 \subsection{Chuyên viên phân tích dữ liệu (Data Analyst)}
 \label{sec:c1-sh-analyst}
-Cần so sánh các mô hình phân bổ doanh thu (First-Touch, Last-Touch, Linear), phân tích phễu chuyển đổi và cohort giữ chân khách hàng trên dữ liệu đã kiểm chứng, đồng thời truy vết được hành trình của từng đơn hàng khi số liệu bất thường.
+Giải thích vì sao các chỉ số tăng hay giảm. Data Analyst cần so sánh các mô hình phân bổ doanh thu (First-Touch, Last-Touch, Linear), phân tích phễu chuyển đổi và cohort giữ chân khách hàng trên dữ liệu đã kiểm chứng, đồng thời truy vết được hành trình của từng đơn hàng khi số liệu bất thường. Yêu cầu liên quan: \BR{01}, \BR{07}, \BR{08}, \BR{09}.
 
 \subsection{Quản lý thương mại điện tử (E-commerce)}
-\label{sec:c1-sh-product}
-Quan tâm đến hiệu quả ngành hàng, thiết bị mua sắm, giá trị đơn hàng, nhịp mua theo khung giờ và vị trí rơi rụng trong phễu từ xem sản phẩm đến thanh toán.
+\label{sec:c1-sh-ecommerce}
+Chịu trách nhiệm về trải nghiệm mua sắm trên website và ứng dụng. Người này quan tâm đến hiệu quả theo ngành hàng và thiết bị, giá trị đơn hàng, nhịp mua theo khung giờ và vị trí khách hàng rời đi trong phễu, từ lúc xem sản phẩm đến khi thanh toán. Yêu cầu liên quan: \BR{07}, \BR{09}.
 
-\subsection{Kỹ sư dữ liệu (Data Engineer)}
+\subsection{Kỹ sư dữ liệu (DE)}
 \label{sec:c1-sh-engineer}
-Chịu trách nhiệm cho tính đúng và tính sẵn sàng của toàn bộ đường ống: theo dõi sức khỏe hệ thống, kết quả kiểm thử chất lượng, nguồn gốc (lineage) của từng bản phát hành, khả năng phát lại và tính lại lịch sử khi công thức thay đổi mà không mất dữ liệu cũ.
+Kỹ sư dữ liệu (Data Engineer, viết tắt DE) chịu trách nhiệm cho tính đúng và tính sẵn sàng của toàn bộ đường ống: theo dõi sức khỏe hệ thống, kết quả kiểm thử chất lượng, nguồn gốc (lineage) của từng bản phát hành, khả năng phát lại và tính lại lịch sử khi công thức thay đổi mà không mất dữ liệu cũ. Yêu cầu liên quan: \BR{06}, \BR{10}.
 
 \subsection{Chủ sở hữu dữ liệu (Data Owner)}
-\label{sec:c1-sh-privacy}
-Bảo đảm dữ liệu cá nhân chỉ được dùng đúng mục đích: lọc theo đồng thuận, ẩn danh hóa định danh trên giao diện, phân quyền theo vai trò và lưu vết kiểm toán mọi truy cập.
+\label{sec:c1-sh-owner}
+Chịu trách nhiệm về việc sử dụng dữ liệu cá nhân của khách hàng. Data Owner bảo đảm dữ liệu chỉ được dùng đúng mục đích mà khách hàng đã đồng ý, thông tin định danh không hiển thị trên giao diện, quyền truy cập được phân theo vai trò và mọi lượt truy cập đều được ghi lại để kiểm toán. Yêu cầu liên quan: \BR{10}.
 
 \section{Yêu cầu nghiệp vụ}
 \label{sec:c1-business-requirements}
 
-Nhóm gồm $n = 4$ thành viên nên đề bài yêu cầu tối thiểu $2n = 8$ yêu cầu nghiệp vụ. MarketPulse 360 xác định \textbf{10 yêu cầu} (\texttt{BR-01} đến \texttt{BR-10}), chia thành sáu nhóm nhu cầu. Với mỗi yêu cầu, phần dưới đây nêu rõ dữ liệu cần có và lý do không thể đáp ứng nếu thiếu giải pháp Kỹ thuật Dữ liệu.
+Nhóm gồm $n = 4$ thành viên nên đề bài yêu cầu tối thiểu $2n = 8$ yêu cầu nghiệp vụ. MarketPulse 360 xác định \textbf{10 yêu cầu nghiệp vụ} (Business Requirements, viết tắt BR), đánh số từ BR-01 đến BR-10 và chia thành năm nhóm nhu cầu. Phần này trình bày năm nhóm nhu cầu trước, nhằm làm rõ mỗi nhóm giải quyết vấn đề kinh doanh nào và vì sao cần đến Kỹ thuật Dữ liệu. Sau đó, từng yêu cầu được mô tả chi tiết: nội dung, người dùng chính, dữ liệu cần có và cách kiểm chứng kết quả.
 
-\subsection{Nhóm 1: Chiến dịch mang lại doanh thu (BR-01)}
-\label{sec:c1-br-group1}
-\textbf{BR-01: So sánh các mô hình phân bổ doanh thu.} Phân bổ doanh thu gộp, hoàn tiền và doanh thu ròng cho chiến dịch theo ba mô hình First-Touch, Last-Touch và Linear trên cửa sổ 30 ngày trước đơn hàng, từ đó tính ROAS theo từng mô hình. \emph{Vai trò của Kỹ thuật Dữ liệu:} phải nối click quảng cáo trả phí (trong luồng web) với đơn hàng (trong luồng đơn hàng) của cùng một hồ sơ khách hàng qua nhiều ngày, đồng thời bảo đảm tổng tiền được phân bổ bằng đúng tổng doanh thu, điều mà báo cáo riêng của từng nền tảng quảng cáo không làm được.
+\subsection{Năm nhóm nhu cầu}
+\label{sec:c1-nhom-nhu-cau}
 
-\subsection{Nhóm 2: Phản ứng tức thời (BR-02 -- BR-05)}
-\label{sec:c1-br-group2}
 \begin{itemize}
-    \item \textbf{BR-02: Giám sát trực tiếp.} Hiển thị chỉ số chiến dịch (phiên theo từng bước phễu, đơn hàng, doanh thu) và lượng truy cập cửa hàng (Live View) trong vài giây sau khi sự kiện xảy ra.
-    \item \textbf{BR-03: Cảnh báo có giải thích.} Phát hiện vượt ngân sách, chi phí tăng đột biến hoặc tỷ trọng hoàn tiền bất thường, mỗi cảnh báo kèm bằng chứng (ngưỡng, giá trị quan sát, phiên bản dữ liệu đã dùng).
-    \item \textbf{BR-04: Theo dõi tiến độ giải ngân.} So sánh chi phí lũy kế với ngân sách cấu hình cho từng chiến dịch trong kỳ.
-    \item \textbf{BR-05: Mô phỏng phân bổ lại ngân sách.} Ước tính doanh thu ròng khi phân bổ lại ngân sách dựa trên ROAS ròng lịch sử, công khai giả định tuyến tính của phép mô phỏng.
+    \item \textbf{Nhóm 1: Chiến dịch nào mang lại doanh thu (\BR{01}).} Mỗi nền tảng quảng cáo tự báo cáo số đơn hàng mà nó cho là do mình mang lại. Khi một khách hàng bấm quảng cáo Google, vài ngày sau bấm quảng cáo Meta rồi mới mua, cả hai nền tảng đều ``nhận công'' cho cùng một đơn, nên cộng các báo cáo lại thường lớn hơn doanh thu thật. Để trả lời đúng, hệ thống phải nối click quảng cáo trả phí (trong luồng sự kiện web) với đơn hàng (trong luồng đơn hàng) của cùng một hồ sơ khách hàng qua nhiều ngày, đồng thời bảo đảm tổng tiền được phân bổ cho các chiến dịch bằng đúng tổng doanh thu, điều mà báo cáo riêng của từng nền tảng quảng cáo không làm được.
+    \item \textbf{Nhóm 2: Phản ứng tức thời (\BR{02} đến \BR{05}).} Ngân sách quảng cáo bị tiêu theo từng giờ, nên phát hiện muộn một chiến dịch vượt ngân sách hay sụt giảm chuyển đổi đồng nghĩa với mất tiền. Nhóm này cần số liệu cập nhật trong vài giây, đòi hỏi xử lý luồng có trạng thái để khử trùng lặp và gom phiên ngay khi sự kiện đến. Tuy vậy, chi phí quảng cáo chỉ đến theo báo cáo hằng ngày, nên các quyết định liên quan đến tiền (cảnh báo, giải ngân, mô phỏng ngân sách) phải dựa trên số liệu chi phí đã kiểm chứng thay vì số liệu tạm thời.
+    \item \textbf{Nhóm 3: Báo cáo đúng đến từng đồng (\BR{06}).} Số liệu marketing được dùng cho báo cáo tài chính và quyết định ngân sách, nên chỉ một lần công bố số sai cũng đủ làm người dùng mất niềm tin vào toàn bộ hệ thống. Kỹ thuật Dữ liệu phải bảo đảm mọi bản số liệu được kiểm thử và đối soát tự động trước khi người dùng nhìn thấy, và một bản lỗi không bao giờ thay thế được bản đang phục vụ.
+    \item \textbf{Nhóm 4: Hành vi và vòng đời khách hàng (\BR{07} đến \BR{09}).} Doanh nghiệp cần biết khách hàng rời đi ở bước nào khi mua sắm, ai là khách hàng giá trị và khách có quay lại sau lần mua đầu tiên hay không. Dữ liệu để trả lời nằm rải rác ở web, ứng dụng, đơn hàng, email và CRM, và cùng một người có thể lúc ẩn danh, lúc đăng nhập. Kỹ thuật Dữ liệu phải hợp nhất định danh trên nhiều nguồn, lưu giữ lịch sử nhiều tháng và tổng hợp sẵn các bảng phân tích để những câu hỏi này được trả lời nhất quán.
+    \item \textbf{Nhóm 5: Quyền riêng tư và tính lại lịch sử (\BR{10}).} Dữ liệu hành vi và mua hàng là dữ liệu cá nhân, chỉ được xử lý đúng mục đích mà khách hàng đã đồng ý theo Nghị định 13/2023/NĐ-CP~\cite{nd13}. Bên cạnh đó, công thức tính chỉ số có thể thay đổi theo thời gian; khi đó doanh nghiệp cần tính lại số liệu quá khứ mà không làm ảnh hưởng đến số liệu đang được sử dụng. Cả hai nhu cầu chỉ đáp ứng được khi quản trị dữ liệu được áp dụng ngay trong đường ống và dữ liệu gốc được lưu bất biến, không thể bổ sung sau ở tầng báo cáo.
 \end{itemize}
-\emph{Vai trò của Kỹ thuật Dữ liệu:} xử lý luồng có trạng thái để có số liệu trong vài giây, nhưng cảnh báo và mô phỏng phải dựa trên số liệu chi phí đã kiểm chứng để không ra quyết định sai từ dữ liệu trùng lặp hoặc đến trễ.
 
-\subsection{Nhóm 3: Chính xác đến từng đồng (BR-06)}
-\label{sec:c1-br-group3}
-\textbf{BR-06: Kiểm chứng trước khi công bố.} Mọi bản phát hành số liệu phải vượt qua kiểm thử dữ liệu tự động (dbt) và đối soát tài chính trước khi người dùng nhìn thấy; số liệu trực tiếp và số liệu đã kiểm chứng được tách biệt. \emph{Vai trò của Kỹ thuật Dữ liệu:} cần một quy trình công bố nguyên tử (atomic publication) và sổ cái vận hành để một bản phát hành lỗi không bao giờ thay thế bản đang phục vụ.
+\subsection{Mười yêu cầu nghiệp vụ}
+\label{sec:c1-br-list}
 
-\subsection{Nhóm 4: Hành vi khách hàng (BR-07 -- BR-09)}
-\label{sec:c1-br-group4}
+Mỗi yêu cầu dưới đây nêu nhóm nhu cầu và người dùng chính, nội dung cần đáp ứng, dữ liệu cần có và cách kiểm chứng. Màn hình, API và bảng dữ liệu hiện thực từng yêu cầu được đối chiếu ở Mục~\ref{sec:c4-doi-chieu}.
+
 \begin{itemize}
-    \item \textbf{BR-07: Phễu chuyển đổi.} Đếm số phiên đạt từng bước \texttt{page\_view}, \texttt{view\_item}, \texttt{add\_to\_cart}, \texttt{begin\_checkout}, \texttt{purchase} theo ngày và chiến dịch.
-    \item \textbf{BR-08: Hồ sơ Customer 360.} Hồ sơ hợp nhất theo khách hàng, dòng thời gian hoạt động, phân đoạn RFM có lưu phiên bản, mức tương tác email và nhịp mua theo khung giờ.
-    \item \textbf{BR-09: Cohort, sản phẩm và địa lý.} Tỷ lệ giữ chân theo cohort tháng, doanh thu theo ngành hàng và thiết bị, phân bố doanh thu theo 13 tỉnh/thành phố.
+    \item \phantomsection\label{br:01}\textbf{BR-01: So sánh các mô hình phân bổ doanh thu.} Thuộc nhóm 1, phục vụ \shCMO{} và \shDA. Với mỗi đơn hàng, hệ thống tìm các click quảng cáo trả phí của cùng hồ sơ khách hàng trong 30 ngày trước khi mua, rồi phân bổ doanh thu gộp, hoàn tiền và doanh thu ròng cho các chiến dịch theo ba mô hình: First-Touch (toàn bộ cho click đầu tiên), Last-Touch (toàn bộ cho click cuối cùng) và Linear (chia đều cho mọi click). Từ đó, hệ thống tính ROAS của từng chiến dịch theo từng mô hình để người dùng thấy kết luận thay đổi ra sao khi đổi cách ghi nhận. Dữ liệu cần có: click trả phí, đơn hàng, hoàn tiền và chi phí quảng cáo. Kiểm chứng: tổng tiền phân bổ của mỗi mô hình phải bằng đúng tổng doanh thu; đơn hàng không có click nào được ghi vào nhóm ``chưa phân bổ'' thay vì bị bỏ đi.
+    \item \phantomsection\label{br:02}\textbf{BR-02: Giám sát trực tiếp.} Thuộc nhóm 2, phục vụ \shPM. Hiển thị chỉ số trong ngày của từng chiến dịch (số phiên ở từng bước phễu, số đơn hàng, doanh thu) và màn hình Live View (khách đang truy cập trong 30 phút gần nhất, khách và phiên trong ngày, đơn hàng, doanh thu), cập nhật vài giây sau khi sự kiện xảy ra. Đây là số liệu tạm thời: giao diện gắn nhãn riêng và không bao giờ cộng chúng với số liệu đã kiểm chứng. Kiểm chứng: số liệu trên Live View phải khớp với dữ liệu nguồn tại cùng thời điểm.
+    \item \phantomsection\label{br:03}\textbf{BR-03: Cảnh báo có giải thích.} Thuộc nhóm 2, phục vụ \shPM{} và \shCMO. Người dùng đặt quy tắc cho ba loại bất thường: chi phí vượt ngân sách, chi phí tăng đột biến so với ngày trước và tỷ trọng hoàn tiền vượt ngưỡng. Mỗi cảnh báo được lưu kèm bằng chứng gồm giá trị quan sát, ngưỡng, khoảng thời gian và phiên bản dữ liệu đã dùng, để người nhận hiểu vì sao cảnh báo xuất hiện. Kiểm chứng: đánh giá lại cùng một quy tắc trên cùng dữ liệu không được sinh cảnh báo trùng.
+    \item \phantomsection\label{br:04}\textbf{BR-04: Theo dõi tiến độ giải ngân.} Thuộc nhóm 2, phục vụ \shCMO{} và \shPM. So sánh chi phí lũy kế với ngân sách đã cấu hình của từng chiến dịch trong kỳ, cho biết chiến dịch đang tiêu nhanh hay chậm so với kế hoạch. Dữ liệu cần có: ngân sách do người dùng nhập và chi phí quảng cáo đã kiểm chứng.
+    \item \phantomsection\label{br:05}\textbf{BR-05: Mô phỏng phân bổ lại ngân sách.} Thuộc nhóm 2, phục vụ \shCMO. Cho phép thử chuyển ngân sách giữa các chiến dịch và ước tính doanh thu ròng thay đổi ra sao, dựa trên ROAS ròng trong lịch sử của từng chiến dịch. Kết quả ghi rõ giả định: đây là kịch bản tuyến tính để so sánh phương án, không phải dự báo.
+    \item \phantomsection\label{br:06}\textbf{BR-06: Kiểm chứng trước khi công bố.} Thuộc nhóm 3, phục vụ \shDE{} và \shCMO. Mọi bản số liệu mới phải vượt qua kiểm thử dữ liệu tự động và đối soát tài chính trước khi người dùng nhìn thấy; bản không đạt bị loại và bản đang phục vụ được giữ nguyên. Việc chuyển sang bản mới diễn ra trọn vẹn trong một bước (công bố nguyên tử), nên người dùng không bao giờ đọc phải số liệu lẫn giữa hai bản. Kỹ sư dữ liệu xem được bản nào đang phục vụ, bản đó được tạo từ dữ liệu nào và kết quả kiểm chứng ra sao.
+    \item \phantomsection\label{br:07}\textbf{BR-07: Phễu chuyển đổi.} Thuộc nhóm 4, phục vụ \shEC{} và \shDA. Đếm số phiên đạt từng bước của hành trình mua sắm, từ xem trang, xem sản phẩm, thêm vào giỏ, bắt đầu thanh toán đến mua hàng, theo ngày và theo chiến dịch, để xác định bước khách hàng rời đi nhiều nhất. Phiên do bot tạo ra bị loại trước khi đếm.
+    \item \phantomsection\label{br:08}\textbf{BR-08: Hồ sơ Customer 360.} Thuộc nhóm 4, phục vụ \shCRM{} và \shDA. Mỗi khách hàng có một hồ sơ hợp nhất từ mọi nguồn, gồm dòng thời gian hoạt động, phân đoạn RFM có lưu phiên bản, mức tương tác với email và nhịp mua theo khung giờ. Từ hồ sơ, người dùng tạo phân đoạn để chăm sóc; chỉ khách đã đồng ý nhận marketing mới được đưa vào danh sách kích hoạt.
+    \item \phantomsection\label{br:09}\textbf{BR-09: Cohort, sản phẩm và địa lý.} Thuộc nhóm 4, phục vụ \shCRM, \shEC{} và \shDA. Tính tỷ lệ khách hàng quay lại theo cohort tháng (nhóm khách mua lần đầu trong cùng một tháng), doanh thu theo ngành hàng và thiết bị, và phân bố doanh thu theo 13 tỉnh, thành phố. Các con số phải khớp với tổng doanh thu đã kiểm chứng; phần doanh thu chưa xác định được vị trí được tách riêng thay vì gán cho một tỉnh bất kỳ.
+    \item \phantomsection\label{br:10}\textbf{BR-10: Quyền riêng tư và tính lại lịch sử.} Thuộc nhóm 5, phục vụ \shDO{} và \shDE. Loại khỏi số liệu đã kiểm chứng mọi dữ liệu của khách hàng không đồng ý cho phép phân tích; chỉ kích hoạt phân đoạn với khách đã đồng ý nhận marketing; giao diện chỉ hiển thị mã bí danh thay cho định danh thật; phân quyền theo ba vai trò (xem, vận hành, quản trị) và ghi nhật ký kiểm toán mọi lượt truy cập. Khi công thức tính thay đổi, lịch sử được tính lại từ dữ liệu gốc đã lưu bất biến trong một không gian cô lập, không ảnh hưởng đến bản số liệu đang phục vụ.
 \end{itemize}
-\emph{Vai trò của Kỹ thuật Dữ liệu:} hợp nhất định danh (khách đã đăng nhập, khách ẩn danh, phiên) trên nhiều nguồn và nhiều tháng dữ liệu; chỉ một kho dữ liệu lịch sử có quản trị mới tính được cohort và Customer 360 nhất quán.
-
-\subsection{Nhóm 5 và 6: Quản trị dữ liệu (BR-10)}
-\label{sec:c1-br-group5-6}
-\textbf{BR-10: Quản trị dữ liệu.} Loại khỏi số liệu đã kiểm chứng mọi sự kiện không có đồng thuận phân tích; chỉ kích hoạt phân đoạn với khách hàng có đồng thuận marketing; ẩn danh hóa định danh trên giao diện; phân quyền ba vai trò \texttt{viewer}, \texttt{operator}, \texttt{admin} kèm nhật ký kiểm toán; và tính lại lịch sử (backfill) một cách cô lập từ các snapshot Bronze đã ghim khi công thức thay đổi. \emph{Vai trò của Kỹ thuật Dữ liệu:} quản trị phải được áp dụng ngay trong đường ống, không thể thêm sau ở tầng báo cáo.
 
 \subsection{Tổng hợp yêu cầu nghiệp vụ}
 \label{sec:c1-br-summary}
 
-Bảng~\ref{tab:br-matrix} tổng hợp ánh xạ giữa sáu nhóm nhu cầu, mười yêu cầu nghiệp vụ, các bên liên quan chính và năng lực Kỹ thuật Dữ liệu cần thiết. Chương~\ref{chap:ung-dung} đối chiếu lại từng yêu cầu với màn hình, API và bảng dữ liệu đã hiện thực.
+Bảng~\ref{tab:br-matrix} tổng hợp ánh xạ giữa năm nhóm nhu cầu, mười yêu cầu nghiệp vụ, các bên liên quan chính và năng lực Kỹ thuật Dữ liệu cần thiết. Chương~\ref{chap:ung-dung} đối chiếu lại từng yêu cầu với màn hình, API và bảng dữ liệu đã hiện thực.
 
 \begin{table}[H]
 \centering
@@ -115,15 +113,15 @@ Bảng~\ref{tab:br-matrix} tổng hợp ánh xạ giữa sáu nhóm nhu cầu, m
 \label{tab:br-matrix}
 \small
 \renewcommand{\arraystretch}{1.25}
-\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.9cm} >{\raggedright\arraybackslash}p{3.4cm} >{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}X}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.9cm} >{\raggedright\arraybackslash}p{3.4cm} >{\raggedright\arraybackslash}p{3.0cm} >{\raggedright\arraybackslash}X}
 \toprule
 \textbf{Nhóm nhu cầu} & \textbf{Yêu cầu} & \textbf{Bên liên quan} & \textbf{Năng lực Kỹ thuật Dữ liệu cần có} \\
 \midrule
-1. Chiến dịch nào mang lại doanh thu & BR-01 Phân bổ đa mô hình & CMO và Analyst & Nối click--đơn hàng 30 ngày, phân bổ số nguyên bảo toàn tổng tiền \\
-2. Phản ứng tức thời & BR-02 Giám sát trực tiếp; BR-03 Cảnh báo; BR-04 Giải ngân; BR-05 Mô phỏng & Performance và CMO & Xử lý luồng có trạng thái, khử trùng lặp, chỉ số chi phí đã kiểm chứng \\
-3. Báo cáo đúng từng đồng & BR-06 Kiểm chứng trước công bố & Data Engineer và CMO & dbt tests, đối soát tài chính, công bố nguyên tử \\
-4. Hành vi và vòng đời & BR-07 Phễu; BR-08 Customer 360; BR-09 Cohort, sản phẩm, địa lý & CRM, Analyst và Product & Hợp nhất định danh, lịch sử nhiều tháng, mô hình Gold \\
-5--6. Quyền riêng tư, tính lại lịch sử & BR-10 Quản trị dữ liệu & Privacy và Data Engineer & Lọc consent trong đường ống, RBAC, snapshot Bronze bất biến \\
+1. Chiến dịch nào mang lại doanh thu & \BR{01} Phân bổ đa mô hình & \shCMO, \shDA & Nối click và đơn hàng trong 30 ngày, phân bổ số nguyên bảo toàn tổng tiền \\
+2. Phản ứng tức thời & \BR{02} Giám sát trực tiếp; \BR{03} Cảnh báo; \BR{04} Giải ngân; \BR{05} Mô phỏng & \shPM, \shCMO & Xử lý luồng có trạng thái, khử trùng lặp, chi phí đã kiểm chứng \\
+3. Báo cáo đúng đến từng đồng & \BR{06} Kiểm chứng trước công bố & \shDE, \shCMO & Kiểm thử dbt, đối soát tài chính, công bố nguyên tử \\
+4. Hành vi và vòng đời khách hàng & \BR{07} Phễu; \BR{08} Customer 360; \BR{09} Cohort, sản phẩm, địa lý & \shCRM, \shEC, \shDA & Hợp nhất định danh, lịch sử nhiều tháng, mô hình Gold \\
+5. Quyền riêng tư và tính lại lịch sử & \BR{10} Quyền riêng tư và tính lại lịch sử & \shDO, \shDE & Lọc đồng thuận ngay trong đường ống, RBAC, snapshot Bronze bất biến \\
 \bottomrule
 \end{tabularx}
 \end{table}
