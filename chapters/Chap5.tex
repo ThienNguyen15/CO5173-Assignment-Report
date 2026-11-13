@@ -110,6 +110,7 @@ Kafka Streams & eval-medium (100k) & \num{52039.8} & \num{1635.03} & \num{1648.0
 
 \begin{figure}[H]
 \centering
+\resizebox{\textwidth}{!}{%
 \begin{tikzpicture}
 \begin{axis}[
     name=tp, ybar, width=0.47\textwidth, height=5.6cm, bar width=12pt,
@@ -125,7 +126,7 @@ Kafka Streams & eval-medium (100k) & \num{52039.8} & \num{1635.03} & \num{1648.0
   \legend{Flink, Kafka Streams}
 \end{axis}
 \begin{axis}[
-    at={(tp.east)}, anchor=west, xshift=1.8cm,
+    at={(tp.outer east)}, anchor=outer west, xshift=1cm,
     ybar, width=0.36\textwidth, height=5.6cm, bar width=22pt,
     ymin=0, ymax=55, ylabel={Thời gian phục hồi (giây)},
     xtick={1,2}, xticklabels={Flink,Kafka Streams}, xmin=0.4, xmax=2.6,
@@ -135,7 +136,7 @@ Kafka Streams & eval-medium (100k) & \num{52039.8} & \num{1635.03} & \num{1648.0
   \addplot[fill=mphead, draw=mphead] coordinates {(1,4.48)};
   \addplot[fill=mpaccent, draw=mpline, bar shift=0pt] coordinates {(2,45.28)};
 \end{axis}
-\end{tikzpicture}
+\end{tikzpicture}}
 \caption{Thông lượng theo quy mô và thời gian phục hồi sau sự cố của Flink và Kafka Streams}
 \label{fig:flink-streams}
 \end{figure}
@@ -182,6 +183,7 @@ Hai hệ thống được nạp cùng một bảng dữ liệu mô phỏng gồm
 
 \begin{figure}[H]
 \centering
+\resizebox{\textwidth}{!}{%
 \begin{tikzpicture}
 \begin{axis}[
     name=lat, ybar, ymode=log, width=0.5\textwidth, height=5.8cm, bar width=10pt,
@@ -196,7 +198,7 @@ Hai hệ thống được nạp cùng một bảng dữ liệu mô phỏng gồm
   \legend{ClickHouse, PostgreSQL}
 \end{axis}
 \begin{axis}[
-    at={(lat.east)}, anchor=west, xshift=1.8cm,
+    at={(lat.outer east)}, anchor=outer west, xshift=1cm,
     ybar, width=0.42\textwidth, height=5.8cm, bar width=10pt,
     ymin=0, ymax=620, ylabel={Thời gian CPU (giây)},
     xtick={1,2,3}, xticklabels={1M,10M,20M}, xmin=0.5, xmax=3.5,
@@ -208,7 +210,7 @@ Hai hệ thống được nạp cùng một bảng dữ liệu mô phỏng gồm
   \addplot[fill=mpaccent, draw=mpline] coordinates {(1,16.94) (2,196.61) (3,485.16)};
   \legend{ClickHouse, PostgreSQL}
 \end{axis}
-\end{tikzpicture}
+\end{tikzpicture}}
 \caption{Độ trễ truy vấn $P_{95}$ ở 20 triệu dòng và thời gian CPU theo quy mô của ClickHouse và PostgreSQL}
 \label{fig:ch-pg}
 \end{figure}
